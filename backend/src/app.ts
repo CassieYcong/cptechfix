@@ -25,7 +25,26 @@ import uploadRoutes from "./routes/uploads";
 
 const app = express();
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN || "*", credentials: true }));
+const rawOrigin = process.env.CORS_ORIGIN || "*";
+const configured = rawOrigin.split(",").map((o) => {
+  const t = o.trim();
+  if (t === "*") return t;
+  if (!/^https?:\/\//i.test(t)) return `https://${t}`;
+  return t;
+});
+
+// Allow the configured origin(s) plus any Vercel preview/production deployment
+// for this project, so preview URLs don't get blocked.
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // same-origin / server-to-server
+    if (configured.includes("*")) return cb(null, true);
+    if (configured.includes(origin)) return cb(null, origin);
+    if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return cb(null, origin);
+    cb(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: "10mb", verify: (req: any, _res, buf) => { req.rawBody = buf.toString(); } }));
 app.use(express.urlencoded({ extended: true }));
 

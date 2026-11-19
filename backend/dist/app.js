@@ -28,7 +28,31 @@ const cart_1 = __importDefault(require("./routes/cart"));
 const uploads_1 = __importDefault(require("./routes/uploads"));
 const app = (0, express_1.default)();
 app.use((0, helmet_1.default)());
-app.use((0, cors_1.default)({ origin: process.env.CORS_ORIGIN || "*", credentials: true }));
+const rawOrigin = process.env.CORS_ORIGIN || "*";
+const configured = rawOrigin.split(",").map((o) => {
+    const t = o.trim();
+    if (t === "*")
+        return t;
+    if (!/^https?:\/\//i.test(t))
+        return `https://${t}`;
+    return t;
+});
+// Allow the configured origin(s) plus any Vercel preview/production deployment
+// for this project, so preview URLs don't get blocked.
+app.use((0, cors_1.default)({
+    origin: (origin, cb) => {
+        if (!origin)
+            return cb(null, true); // same-origin / server-to-server
+        if (configured.includes("*"))
+            return cb(null, true);
+        if (configured.includes(origin))
+            return cb(null, origin);
+        if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin))
+            return cb(null, origin);
+        cb(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+}));
 app.use(express_1.default.json({ limit: "10mb", verify: (req, _res, buf) => { req.rawBody = buf.toString(); } }));
 app.use(express_1.default.urlencoded({ extended: true }));
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));

@@ -1,7 +1,18 @@
 import axios from "axios";
 
+let apiUrl = import.meta.env.VITE_API_URL;
+if (!apiUrl) {
+  // Sensible default: local dev backend, or production backend when built for prod.
+  apiUrl = import.meta.env.PROD
+    ? "https://cptechfix.onrender.com/api"
+    : "http://localhost:5000/api";
+}
+// Normalize: ensure the API base URL includes the /api prefix.
+if (!/\/api\/?$/.test(apiUrl)) {
+  apiUrl = apiUrl.replace(/\/+$/, "") + "/api";
+}
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  baseURL: apiUrl,
 });
 
 api.interceptors.request.use((config) => {
