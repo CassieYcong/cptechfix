@@ -60,7 +60,7 @@ export const AdminLayout: React.FC = () => {
             <div className="text-xs text-white/60 truncate">{user?.role}</div>
           </div>
         </div>
-        <button onClick={() => { logout(); nav("/"); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/75 hover:bg-white/10 hover:text-white transition">
+        <button onClick={() => { logout(); nav("/login"); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/75 hover:bg-white/10 hover:text-white transition">
           <LogOut size={18} /> Logout
         </button>
       </div>

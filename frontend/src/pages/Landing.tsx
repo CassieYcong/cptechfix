@@ -158,6 +158,9 @@ export const Landing: React.FC = () => {
             
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => nav("/login")} className="px-5 py-2 rounded-lg border border-white/20 text-white font-semibold text-sm hover:bg-white/10 transition">
+              Log In
+            </button>
             <button onClick={() => nav("/register")} className="px-5 py-2 rounded-lg bg-emerald-400 text-[#070d1a] font-bold text-sm hover:bg-emerald-300 transition shadow-[0_0_20px_rgba(0,240,118,0.3)]">
               Sign Up
             </button>
