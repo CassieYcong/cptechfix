@@ -1,0 +1,1 @@
+export { CustomerLayout } from "../components/common/layouts/CustomerLayout";

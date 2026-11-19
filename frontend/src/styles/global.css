@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #0f2a6b;
+  --color-navy-dark: #0a1f52;
+  --color-navy-light: #1e4fa3;
+  --color-navy-50: #eef2ff;
+  --color-brandgreen: #16a34a;
+  --color-brandgreen-dark: #15803d;
+  --color-brandgreen-light: #22c55e;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+:root {
+  --navy: #0f2a6b;
+  --navy-dark: #0a1f52;
+  --navy-light: #1e4fa3;
+  --green: #16a34a;
+  --green-dark: #15803d;
+}
+
+* { box-sizing: border-box; }
+
+/* Remove yellow text-selection / autofill highlights */
+::selection {
+  background: #16a34a;
+  color: #ffffff;
+}
+::-moz-selection {
+  background: #16a34a;
+  color: #ffffff;
+}
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+  -webkit-text-fill-color: #0f172a;
+  transition: background-color 5000s ease-in-out 0s;
+  caret-color: #0f172a;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: #f1f5f9;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Reusable utility classes */
+.glass { background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); }
+.card-hover { transition: transform .2s ease, box-shadow .2s ease; }
+.card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(15,42,107,.18); }
+.btn-primary { background: linear-gradient(135deg,#0f2a6b,#1e4fa3); color:#fff; }
+.btn-green { background: linear-gradient(135deg,#16a34a,#15803d); color:#fff; }
+.gradient-text { background: linear-gradient(135deg,#0f2a6b,#16a34a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero-overlay { background: linear-gradient(120deg, rgba(15,42,107,.85) 0%, rgba(15,42,107,.55) 60%, rgba(22,163,74,.45) 100%); }
+/* End on transform:none so a filled animation does not leave a transform on the
+   element — a retained transform makes that element the containing block for
+   fixed-position descendants (modals) and shifts/clips them. */
+@keyframes fadeIn { from { opacity:0; transform: translateY(8px);} to {opacity:1;transform:none;} }
+.fade-in { animation: fadeIn .4s ease both; }
+@keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
+.animate-fadeIn { animation: fadeIn .2s ease both; }
+.animate-fadeOut { animation: fadeOut .2s ease both; }
+@keyframes overlayIn { from { opacity:0; } to { opacity:1; } }
+.animate-overlayIn { animation: overlayIn .2s ease both; }
+@keyframes overlayOut { from { opacity:1; } to { opacity:0; } }
+.animate-overlayOut { animation: overlayOut .2s ease both; }
+@keyframes scaleIn { from { opacity:0; transform: scale(0.95);} to {opacity:1;transform:scale(1);} }
+@keyframes scaleOut { from { opacity:1; transform: scale(1);} to {opacity:0;transform:scale(0.95);} }
+.animate-scaleIn { animation: scaleIn .2s ease both; }
+.animate-scaleOut { animation: scaleOut .2s ease both; }
+@keyframes shimmer { 0%{background-position:-200% 0}100%{background-position:200% 0} }
+.skeleton { background: linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%); background-size:200% 100%; animation: shimmer 1.4s infinite; border-radius:6px; }

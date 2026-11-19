@@ -1,0 +1,1 @@
+export { AdminLayout } from "../components/common/layouts/AdminLayout";
