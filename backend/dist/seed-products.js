@@ -1,7 +1,9 @@
-import "dotenv/config";
-import { db } from "./db";
-import { products } from "./schema";
-import { eq } from "drizzle-orm";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv/config");
+const db_1 = require("./db");
+const schema_1 = require("./schema");
+const drizzle_orm_1 = require("drizzle-orm");
 const img = (id) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=600&q=80`;
 const sampleProducts = [
     {
@@ -282,13 +284,13 @@ async function seedProducts() {
     let inserted = 0;
     let updated = 0;
     for (const p of sampleProducts) {
-        const existing = await db.select().from(products).where(eq(products.sku, p.sku));
+        const existing = await db_1.db.select().from(schema_1.products).where((0, drizzle_orm_1.eq)(schema_1.products.sku, p.sku));
         if (existing.length) {
-            await db.update(products).set({ ...p, costPrice: "0", updatedAt: new Date() }).where(eq(products.sku, p.sku));
+            await db_1.db.update(schema_1.products).set({ ...p, costPrice: "0", updatedAt: new Date() }).where((0, drizzle_orm_1.eq)(schema_1.products.sku, p.sku));
             updated++;
         }
         else {
-            await db.insert(products).values({ ...p, costPrice: "0" });
+            await db_1.db.insert(schema_1.products).values({ ...p, costPrice: "0" });
             inserted++;
         }
     }

@@ -1,29 +1,31 @@
-import { Router } from "express";
-import { z } from "zod";
-import { db } from "../db";
-import { products, inventoryMovements, orderItems } from "../schema";
-import { eq, sql } from "drizzle-orm";
-import { authenticate, requireRole } from "../middlewares/auth";
-import { validate } from "../middlewares/validate";
-const router = Router();
-const productSchema = z.object({
-    sku: z.string().min(1),
-    productName: z.string().min(1),
-    description: z.string().optional(),
-    category: z.string().optional(),
-    brand: z.string().optional(),
-    supplier: z.string().optional(),
-    costPrice: z.number().min(0).optional(),
-    sellingPrice: z.number().min(0),
-    stock: z.number().int().min(0).optional(),
-    minimumStock: z.number().int().min(0).optional(),
-    imageUrl: z.string().optional(),
-    isActive: z.boolean().optional(),
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const zod_1 = require("zod");
+const db_1 = require("../db");
+const schema_1 = require("../schema");
+const drizzle_orm_1 = require("drizzle-orm");
+const auth_1 = require("../middlewares/auth");
+const validate_1 = require("../middlewares/validate");
+const router = (0, express_1.Router)();
+const productSchema = zod_1.z.object({
+    sku: zod_1.z.string().min(1),
+    productName: zod_1.z.string().min(1),
+    description: zod_1.z.string().optional(),
+    category: zod_1.z.string().optional(),
+    brand: zod_1.z.string().optional(),
+    supplier: zod_1.z.string().optional(),
+    costPrice: zod_1.z.number().min(0).optional(),
+    sellingPrice: zod_1.z.number().min(0),
+    stock: zod_1.z.number().int().min(0).optional(),
+    minimumStock: zod_1.z.number().int().min(0).optional(),
+    imageUrl: zod_1.z.string().optional(),
+    isActive: zod_1.z.boolean().optional(),
 });
 router.get("/", async (req, res) => {
     const q = req.query.q;
     const category = req.query.category;
-    let rows = await db.select().from(products);
+    let rows = await db_1.db.select().from(schema_1.products);
     if (q)
         rows = rows.filter((p) => p.productName.toLowerCase().includes(q.toLowerCase()) || p.sku.toLowerCase().includes(q.toLowerCase()));
     if (category)
@@ -31,33 +33,33 @@ router.get("/", async (req, res) => {
     res.json(rows);
 });
 // movements (must be before /:id)
-router.get("/movements", authenticate, async (req, res) => {
-    const rows = await db.select().from(inventoryMovements).orderBy(inventoryMovements.createdAt);
+router.get("/movements", auth_1.authenticate, async (req, res) => {
+    const rows = await db_1.db.select().from(schema_1.inventoryMovements).orderBy(schema_1.inventoryMovements.createdAt);
     res.json(rows);
 });
 // low stock (must be before /:id)
-router.get("/low-stock", authenticate, async (_req, res) => {
-    const rows = await db.select().from(products);
+router.get("/low-stock", auth_1.authenticate, async (_req, res) => {
+    const rows = await db_1.db.select().from(schema_1.products);
     res.json(rows.filter((p) => p.stock <= p.minimumStock));
 });
 router.post("/:id/views", async (req, res) => {
-    const [p] = await db.update(products).set({ viewsCount: sql `${products.viewsCount} + 1` }).where(eq(products.id, req.params.id)).returning();
+    const [p] = await db_1.db.update(schema_1.products).set({ viewsCount: (0, drizzle_orm_1.sql) `${schema_1.products.viewsCount} + 1` }).where((0, drizzle_orm_1.eq)(schema_1.products.id, req.params.id)).returning();
     if (!p)
         return res.status(404).json({ message: "Not found" });
     res.json({ id: p.id, viewsCount: p.viewsCount });
 });
 router.get("/:id", async (req, res) => {
-    const [p] = await db.select().from(products).where(eq(products.id, req.params.id));
+    const [p] = await db_1.db.select().from(schema_1.products).where((0, drizzle_orm_1.eq)(schema_1.products.id, req.params.id));
     if (!p)
         return res.status(404).json({ message: "Not found" });
     res.json(p);
 });
-router.post("/", authenticate, requireRole("ADMIN", "STAFF"), validate(productSchema), async (req, res) => {
+router.post("/", auth_1.authenticate, (0, auth_1.requireRole)("ADMIN", "STAFF"), (0, validate_1.validate)(productSchema), async (req, res) => {
     const data = req.body;
-    const dupe = await db.select().from(products).where(eq(products.sku, data.sku));
+    const dupe = await db_1.db.select().from(schema_1.products).where((0, drizzle_orm_1.eq)(schema_1.products.sku, data.sku));
     if (dupe.length)
         return res.status(409).json({ message: "SKU already exists" });
-    const [p] = await db.insert(products).values({
+    const [p] = await db_1.db.insert(schema_1.products).values({
         sku: data.sku,
         productName: data.productName,
         description: data.description,
@@ -72,7 +74,7 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), validate(productSc
         isActive: data.isActive ?? true,
     }).returning();
     // initial movement
-    await db.insert(inventoryMovements).values({
+    await db_1.db.insert(schema_1.inventoryMovements).values({
         productId: p.id,
         movementType: "STOCK_IN",
         quantity: p.stock,
@@ -85,17 +87,17 @@ router.post("/", authenticate, requireRole("ADMIN", "STAFF"), validate(productSc
     });
     res.status(201).json(p);
 });
-router.put("/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res) => {
+router.put("/:id", auth_1.authenticate, (0, auth_1.requireRole)("ADMIN", "STAFF"), async (req, res) => {
     const data = req.body;
     if (data.sku !== undefined) {
-        const dupe = await db.select().from(products).where(eq(products.sku, data.sku));
+        const dupe = await db_1.db.select().from(schema_1.products).where((0, drizzle_orm_1.eq)(schema_1.products.sku, data.sku));
         if (dupe.length && dupe[0].id !== req.params.id)
             return res.status(409).json({ message: "SKU already exists" });
     }
-    const [existing] = await db.select().from(products).where(eq(products.id, req.params.id));
+    const [existing] = await db_1.db.select().from(schema_1.products).where((0, drizzle_orm_1.eq)(schema_1.products.id, req.params.id));
     if (!existing)
         return res.status(404).json({ message: "Product not found" });
-    const [p] = await db.update(products).set({
+    const [p] = await db_1.db.update(schema_1.products).set({
         sku: data.sku,
         productName: data.productName,
         description: data.description,
@@ -109,9 +111,9 @@ router.put("/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res)
         imageUrl: data.imageUrl,
         isActive: data.isActive,
         updatedAt: new Date(),
-    }).where(eq(products.id, req.params.id)).returning();
+    }).where((0, drizzle_orm_1.eq)(schema_1.products.id, req.params.id)).returning();
     if (data.stock !== undefined && Number(data.stock) !== existing.stock) {
-        await db.insert(inventoryMovements).values({
+        await db_1.db.insert(schema_1.inventoryMovements).values({
             productId: existing.id,
             movementType: "ADJUSTMENT",
             quantity: Number(data.stock) - existing.stock,
@@ -125,28 +127,28 @@ router.put("/:id", authenticate, requireRole("ADMIN", "STAFF"), async (req, res)
     }
     res.json(p);
 });
-router.delete("/:id", authenticate, requireRole("ADMIN"), async (req, res) => {
+router.delete("/:id", auth_1.authenticate, (0, auth_1.requireRole)("ADMIN"), async (req, res) => {
     // check order history
-    const used = await db.select().from(orderItems).where(eq(orderItems.productId, req.params.id));
+    const used = await db_1.db.select().from(schema_1.orderItems).where((0, drizzle_orm_1.eq)(schema_1.orderItems.productId, req.params.id));
     // check inventory movements (created on product creation and stock adjustments)
-    const moves = await db.select().from(inventoryMovements).where(eq(inventoryMovements.productId, req.params.id));
+    const moves = await db_1.db.select().from(schema_1.inventoryMovements).where((0, drizzle_orm_1.eq)(schema_1.inventoryMovements.productId, req.params.id));
     if (used.length || moves.length) {
-        await db.update(products).set({ isActive: false, updatedAt: new Date() }).where(eq(products.id, req.params.id));
+        await db_1.db.update(schema_1.products).set({ isActive: false, updatedAt: new Date() }).where((0, drizzle_orm_1.eq)(schema_1.products.id, req.params.id));
         return res.json({ message: "Product deactivated (has related records)" });
     }
-    await db.delete(products).where(eq(products.id, req.params.id));
+    await db_1.db.delete(schema_1.products).where((0, drizzle_orm_1.eq)(schema_1.products.id, req.params.id));
     res.json({ message: "Deleted" });
 });
 // stock adjustment
-const adjustSchema = z.object({
-    productId: z.string().uuid(),
-    quantity: z.number().int(),
-    movementType: z.enum(["STOCK_IN", "STOCK_OUT", "DAMAGED", "ADJUSTMENT", "RETURN"]),
-    remarks: z.string().optional(),
+const adjustSchema = zod_1.z.object({
+    productId: zod_1.z.string().uuid(),
+    quantity: zod_1.z.number().int(),
+    movementType: zod_1.z.enum(["STOCK_IN", "STOCK_OUT", "DAMAGED", "ADJUSTMENT", "RETURN"]),
+    remarks: zod_1.z.string().optional(),
 });
-router.post("/adjustments", authenticate, requireRole("ADMIN", "STAFF"), validate(adjustSchema), async (req, res) => {
+router.post("/adjustments", auth_1.authenticate, (0, auth_1.requireRole)("ADMIN", "STAFF"), (0, validate_1.validate)(adjustSchema), async (req, res) => {
     const { productId, quantity, movementType, remarks } = req.body;
-    const [p] = await db.select().from(products).where(eq(products.id, productId));
+    const [p] = await db_1.db.select().from(schema_1.products).where((0, drizzle_orm_1.eq)(schema_1.products.id, productId));
     if (!p)
         return res.status(404).json({ message: "Product not found" });
     let newStock = p.stock;
@@ -158,8 +160,8 @@ router.post("/adjustments", authenticate, requireRole("ADMIN", "STAFF"), validat
         newStock += quantity; // adjustment can be +/- 
     if (newStock < 0)
         return res.status(400).json({ message: "Insufficient stock" });
-    await db.update(products).set({ stock: newStock, updatedAt: new Date() }).where(eq(products.id, productId));
-    await db.insert(inventoryMovements).values({
+    await db_1.db.update(schema_1.products).set({ stock: newStock, updatedAt: new Date() }).where((0, drizzle_orm_1.eq)(schema_1.products.id, productId));
+    await db_1.db.insert(schema_1.inventoryMovements).values({
         productId,
         movementType,
         quantity: movementType === "ADJUSTMENT" ? quantity : Math.abs(quantity),
@@ -171,5 +173,5 @@ router.post("/adjustments", authenticate, requireRole("ADMIN", "STAFF"), validat
     });
     res.json({ productId, previousStock: p.stock, newStock });
 });
-export default router;
+exports.default = router;
 //# sourceMappingURL=products.js.map

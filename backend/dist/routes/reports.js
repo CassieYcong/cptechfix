@@ -1,10 +1,12 @@
-import { Router } from "express";
-import { db } from "../db";
-import { orders, payments, repairs, refunds, orderItems, products } from "../schema";
-import { desc } from "drizzle-orm";
-import { authenticate, requireRole } from "../middlewares/auth";
-const router = Router();
-router.use(authenticate, requireRole("ADMIN", "STAFF"));
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const db_1 = require("../db");
+const schema_1 = require("../schema");
+const drizzle_orm_1 = require("drizzle-orm");
+const auth_1 = require("../middlewares/auth");
+const router = (0, express_1.Router)();
+router.use(auth_1.authenticate, (0, auth_1.requireRole)("ADMIN", "STAFF"));
 function parseRange(req) {
     const from = req.query.from ? new Date(String(req.query.from)) : null;
     const to = req.query.to ? new Date(String(req.query.to)) : null;
@@ -12,10 +14,10 @@ function parseRange(req) {
 }
 router.get("/revenue", async (req, res) => {
     const { from, to } = parseRange(req);
-    const allOrders = await db.select().from(orders);
-    const allPayments = await db.select().from(payments);
-    const allRepairs = await db.select().from(repairs);
-    const allRefunds = await db.select().from(refunds);
+    const allOrders = await db_1.db.select().from(schema_1.orders);
+    const allPayments = await db_1.db.select().from(schema_1.payments);
+    const allRepairs = await db_1.db.select().from(schema_1.repairs);
+    const allRefunds = await db_1.db.select().from(schema_1.refunds);
     const inRange = (d) => {
         if (from && d < from)
             return false;
@@ -46,11 +48,11 @@ router.get("/revenue", async (req, res) => {
     for (const o of ordersInRange) {
         // need items; fetch
     }
-    const allItems = await db.select().from(orderItems);
+    const allItems = await db_1.db.select().from(schema_1.orderItems);
     for (const it of allItems) {
         soldMap[it.productId] = (soldMap[it.productId] || 0) + it.quantity;
     }
-    const productList = await db.select().from(products);
+    const productList = await db_1.db.select().from(schema_1.products);
     const bestSelling = productList
         .map((p) => ({ id: p.id, name: p.productName, sold: soldMap[p.id] || 0, revenue: (soldMap[p.id] || 0) * Number(p.sellingPrice) }))
         .sort((a, b) => b.sold - a.sold)
@@ -73,26 +75,26 @@ router.get("/revenue", async (req, res) => {
     });
 });
 router.get("/sales", async (req, res) => {
-    const rows = await db.select().from(orders).orderBy(desc(orders.createdAt));
+    const rows = await db_1.db.select().from(schema_1.orders).orderBy((0, drizzle_orm_1.desc)(schema_1.orders.createdAt));
     res.json(rows);
 });
 router.get("/refunds", async (req, res) => {
-    const rows = await db.select().from(refunds).orderBy(desc(refunds.createdAt));
+    const rows = await db_1.db.select().from(schema_1.refunds).orderBy((0, drizzle_orm_1.desc)(schema_1.refunds.createdAt));
     res.json(rows);
 });
 router.get("/transactions", async (req, res) => {
-    const ordersRows = await db.select().from(orders).orderBy(desc(orders.createdAt));
-    const repairsRows = await db.select().from(repairs).orderBy(desc(repairs.createdAt));
+    const ordersRows = await db_1.db.select().from(schema_1.orders).orderBy((0, drizzle_orm_1.desc)(schema_1.orders.createdAt));
+    const repairsRows = await db_1.db.select().from(schema_1.repairs).orderBy((0, drizzle_orm_1.desc)(schema_1.repairs.createdAt));
     res.json({ orders: ordersRows, repairs: repairsRows });
 });
 router.get("/export", async (_req, res) => {
     // simple CSV of orders
-    const rows = await db.select().from(orders);
+    const rows = await db_1.db.select().from(schema_1.orders);
     const header = "orderNumber,totalAmount,paymentStatus,orderStatus,source,createdAt\n";
     const body = rows.map((o) => `${o.orderNumber},${o.totalAmount},${o.paymentStatus},${o.orderStatus},${o.transactionSource},${o.createdAt}`).join("\n");
     res.setHeader("Content-Type", "text/csv");
     res.setHeader("Content-Disposition", "attachment; filename=report.csv");
     res.send(header + body);
 });
-export default router;
+exports.default = router;
 //# sourceMappingURL=reports.js.map

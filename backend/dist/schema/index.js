@@ -1,16 +1,19 @@
-import { pgTable, uuid, varchar, text, integer, decimal, timestamp, boolean, pgEnum, } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.orderItemsRelations = exports.ordersRelations = exports.repairsRelations = exports.productsRelations = exports.usersRelations = exports.notifications = exports.cartItems = exports.paymentEvents = exports.reviews = exports.cancellations = exports.refundHistory = exports.refunds = exports.receipts = exports.invoices = exports.payments = exports.orderItems = exports.orders = exports.repairStatusHistory = exports.repairs = exports.inventoryMovements = exports.products = exports.users = exports.moderationStatusEnum = exports.cancellationStatusEnum = exports.refundStatusEnum = exports.movementTypeEnum = exports.paymentStatusEnum = exports.orderStatusEnum = exports.repairStatusEnum = exports.transactionSourceEnum = exports.roleEnum = void 0;
+const pg_core_1 = require("drizzle-orm/pg-core");
+const drizzle_orm_1 = require("drizzle-orm");
 // ---------- Enums ----------
-export const roleEnum = pgEnum("role", ["CUSTOMER", "STAFF", "ADMIN"]);
-export const transactionSourceEnum = pgEnum("transaction_source", ["ONLINE", "WALK_IN"]);
-export const repairStatusEnum = pgEnum("repair_status", [
+exports.roleEnum = (0, pg_core_1.pgEnum)("role", ["CUSTOMER", "STAFF", "ADMIN"]);
+exports.transactionSourceEnum = (0, pg_core_1.pgEnum)("transaction_source", ["ONLINE", "WALK_IN"]);
+exports.repairStatusEnum = (0, pg_core_1.pgEnum)("repair_status", [
     "PENDING",
     "APPROVED",
     "IN_PROGRESS",
     "COMPLETED",
     "CANCELLED",
 ]);
-export const orderStatusEnum = pgEnum("order_status", [
+exports.orderStatusEnum = (0, pg_core_1.pgEnum)("order_status", [
     "PENDING",
     "CONFIRMED",
     "PROCESSING",
@@ -18,7 +21,7 @@ export const orderStatusEnum = pgEnum("order_status", [
     "COMPLETED",
     "CANCELLED",
 ]);
-export const paymentStatusEnum = pgEnum("payment_status", [
+exports.paymentStatusEnum = (0, pg_core_1.pgEnum)("payment_status", [
     "UNPAID",
     "PENDING",
     "PROCESSING",
@@ -29,7 +32,7 @@ export const paymentStatusEnum = pgEnum("payment_status", [
     "REFUNDED",
     "PARTIALLY_REFUNDED",
 ]);
-export const movementTypeEnum = pgEnum("movement_type", [
+exports.movementTypeEnum = (0, pg_core_1.pgEnum)("movement_type", [
     "STOCK_IN",
     "STOCK_OUT",
     "SALE",
@@ -37,7 +40,7 @@ export const movementTypeEnum = pgEnum("movement_type", [
     "DAMAGED",
     "ADJUSTMENT",
 ]);
-export const refundStatusEnum = pgEnum("refund_status", [
+exports.refundStatusEnum = (0, pg_core_1.pgEnum)("refund_status", [
     "REQUESTED",
     "UNDER_REVIEW",
     "APPROVED",
@@ -45,12 +48,12 @@ export const refundStatusEnum = pgEnum("refund_status", [
     "REFUNDED",
     "REJECTED",
 ]);
-export const cancellationStatusEnum = pgEnum("cancellation_status", [
+exports.cancellationStatusEnum = (0, pg_core_1.pgEnum)("cancellation_status", [
     "REQUESTED",
     "APPROVED",
     "REJECTED",
 ]);
-export const moderationStatusEnum = pgEnum("moderation_status", [
+exports.moderationStatusEnum = (0, pg_core_1.pgEnum)("moderation_status", [
     "VISIBLE",
     "HIDDEN",
     "ARCHIVED",
@@ -59,249 +62,249 @@ export const moderationStatusEnum = pgEnum("moderation_status", [
     "REJECTED",
 ]);
 // ---------- users ----------
-export const users = pgTable("users", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    fullName: varchar("full_name", { length: 255 }).notNull(),
-    email: varchar("email", { length: 255 }).notNull().unique(),
-    phoneNumber: varchar("phone_number", { length: 50 }),
-    profileImage: text("profile_image"),
-    password: varchar("password", { length: 255 }).notNull(),
-    role: roleEnum("role").notNull().default("CUSTOMER"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+exports.users = (0, pg_core_1.pgTable)("users", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    fullName: (0, pg_core_1.varchar)("full_name", { length: 255 }).notNull(),
+    email: (0, pg_core_1.varchar)("email", { length: 255 }).notNull().unique(),
+    phoneNumber: (0, pg_core_1.varchar)("phone_number", { length: 50 }),
+    profileImage: (0, pg_core_1.text)("profile_image"),
+    password: (0, pg_core_1.varchar)("password", { length: 255 }).notNull(),
+    role: (0, exports.roleEnum)("role").notNull().default("CUSTOMER"),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at").defaultNow().notNull(),
 });
 // ---------- products ----------
-export const products = pgTable("products", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    sku: varchar("sku", { length: 100 }).notNull().unique(),
-    productName: varchar("product_name", { length: 255 }).notNull(),
-    description: text("description"),
-    specifications: text("specifications"),
-    category: varchar("category", { length: 100 }),
-    brand: varchar("brand", { length: 100 }),
-    supplier: varchar("supplier", { length: 255 }),
-    costPrice: decimal("cost_price", { precision: 12, scale: 2 }).notNull().default("0"),
-    sellingPrice: decimal("selling_price", { precision: 12, scale: 2 }).notNull().default("0"),
-    stock: integer("stock").notNull().default(0),
-    minimumStock: integer("minimum_stock").notNull().default(5),
-    imageUrl: text("image_url"),
-    images: text("images"),
-    rating: decimal("rating", { precision: 3, scale: 2 }).notNull().default("4.5"),
-    sold: integer("sold").notNull().default(0),
-    viewsCount: integer("views_count").notNull().default(0),
-    isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+exports.products = (0, pg_core_1.pgTable)("products", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    sku: (0, pg_core_1.varchar)("sku", { length: 100 }).notNull().unique(),
+    productName: (0, pg_core_1.varchar)("product_name", { length: 255 }).notNull(),
+    description: (0, pg_core_1.text)("description"),
+    specifications: (0, pg_core_1.text)("specifications"),
+    category: (0, pg_core_1.varchar)("category", { length: 100 }),
+    brand: (0, pg_core_1.varchar)("brand", { length: 100 }),
+    supplier: (0, pg_core_1.varchar)("supplier", { length: 255 }),
+    costPrice: (0, pg_core_1.decimal)("cost_price", { precision: 12, scale: 2 }).notNull().default("0"),
+    sellingPrice: (0, pg_core_1.decimal)("selling_price", { precision: 12, scale: 2 }).notNull().default("0"),
+    stock: (0, pg_core_1.integer)("stock").notNull().default(0),
+    minimumStock: (0, pg_core_1.integer)("minimum_stock").notNull().default(5),
+    imageUrl: (0, pg_core_1.text)("image_url"),
+    images: (0, pg_core_1.text)("images"),
+    rating: (0, pg_core_1.decimal)("rating", { precision: 3, scale: 2 }).notNull().default("4.5"),
+    sold: (0, pg_core_1.integer)("sold").notNull().default(0),
+    viewsCount: (0, pg_core_1.integer)("views_count").notNull().default(0),
+    isActive: (0, pg_core_1.boolean)("is_active").notNull().default(true),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at").defaultNow().notNull(),
 });
 // ---------- inventory_movements ----------
-export const inventoryMovements = pgTable("inventory_movements", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    productId: uuid("product_id").notNull().references(() => products.id),
-    movementType: movementTypeEnum("movement_type").notNull(),
-    quantity: integer("quantity").notNull(),
-    previousStock: integer("previous_stock").notNull(),
-    newStock: integer("new_stock").notNull(),
-    referenceType: varchar("reference_type", { length: 50 }),
-    referenceId: uuid("reference_id"),
-    remarks: text("remarks"),
-    createdBy: uuid("created_by").references(() => users.id),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+exports.inventoryMovements = (0, pg_core_1.pgTable)("inventory_movements", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    productId: (0, pg_core_1.uuid)("product_id").notNull().references(() => exports.products.id),
+    movementType: (0, exports.movementTypeEnum)("movement_type").notNull(),
+    quantity: (0, pg_core_1.integer)("quantity").notNull(),
+    previousStock: (0, pg_core_1.integer)("previous_stock").notNull(),
+    newStock: (0, pg_core_1.integer)("new_stock").notNull(),
+    referenceType: (0, pg_core_1.varchar)("reference_type", { length: 50 }),
+    referenceId: (0, pg_core_1.uuid)("reference_id"),
+    remarks: (0, pg_core_1.text)("remarks"),
+    createdBy: (0, pg_core_1.uuid)("created_by").references(() => exports.users.id),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
 });
 // ---------- repairs ----------
-export const repairs = pgTable("repairs", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    referenceNumber: varchar("reference_number", { length: 50 }).notNull().unique(),
-    userId: uuid("user_id").references(() => users.id),
-    transactionSource: transactionSourceEnum("transaction_source").notNull().default("ONLINE"),
-    customerName: varchar("customer_name", { length: 255 }),
-    contactNumber: varchar("contact_number", { length: 50 }),
-    deviceType: varchar("device_type", { length: 100 }).notNull(),
-    brand: varchar("brand", { length: 100 }),
-    model: varchar("model", { length: 100 }),
-    problemDescription: text("problem_description").notNull(),
-    imageUrl: text("image_url"),
-    serviceType: varchar("service_type", { length: 100 }),
-    technician: varchar("technician", { length: 100 }),
-    repairCost: decimal("repair_cost", { precision: 12, scale: 2 }).notNull().default("0"),
-    amountPaid: decimal("amount_paid", { precision: 12, scale: 2 }).notNull().default("0"),
-    remainingBalance: decimal("remaining_balance", { precision: 12, scale: 2 }).notNull().default("0"),
-    preferredDate: timestamp("preferred_date"),
-    expectedCompletionDate: timestamp("expected_completion_date"),
-    status: repairStatusEnum("status").notNull().default("PENDING"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+exports.repairs = (0, pg_core_1.pgTable)("repairs", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    referenceNumber: (0, pg_core_1.varchar)("reference_number", { length: 50 }).notNull().unique(),
+    userId: (0, pg_core_1.uuid)("user_id").references(() => exports.users.id),
+    transactionSource: (0, exports.transactionSourceEnum)("transaction_source").notNull().default("ONLINE"),
+    customerName: (0, pg_core_1.varchar)("customer_name", { length: 255 }),
+    contactNumber: (0, pg_core_1.varchar)("contact_number", { length: 50 }),
+    deviceType: (0, pg_core_1.varchar)("device_type", { length: 100 }).notNull(),
+    brand: (0, pg_core_1.varchar)("brand", { length: 100 }),
+    model: (0, pg_core_1.varchar)("model", { length: 100 }),
+    problemDescription: (0, pg_core_1.text)("problem_description").notNull(),
+    imageUrl: (0, pg_core_1.text)("image_url"),
+    serviceType: (0, pg_core_1.varchar)("service_type", { length: 100 }),
+    technician: (0, pg_core_1.varchar)("technician", { length: 100 }),
+    repairCost: (0, pg_core_1.decimal)("repair_cost", { precision: 12, scale: 2 }).notNull().default("0"),
+    amountPaid: (0, pg_core_1.decimal)("amount_paid", { precision: 12, scale: 2 }).notNull().default("0"),
+    remainingBalance: (0, pg_core_1.decimal)("remaining_balance", { precision: 12, scale: 2 }).notNull().default("0"),
+    preferredDate: (0, pg_core_1.timestamp)("preferred_date"),
+    expectedCompletionDate: (0, pg_core_1.timestamp)("expected_completion_date"),
+    status: (0, exports.repairStatusEnum)("status").notNull().default("PENDING"),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at").defaultNow().notNull(),
 });
 // ---------- repair_status_history ----------
-export const repairStatusHistory = pgTable("repair_status_history", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    repairId: uuid("repair_id").notNull().references(() => repairs.id),
-    status: repairStatusEnum("status").notNull(),
-    remarks: text("remarks"),
-    updatedBy: uuid("updated_by").references(() => users.id),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+exports.repairStatusHistory = (0, pg_core_1.pgTable)("repair_status_history", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    repairId: (0, pg_core_1.uuid)("repair_id").notNull().references(() => exports.repairs.id),
+    status: (0, exports.repairStatusEnum)("status").notNull(),
+    remarks: (0, pg_core_1.text)("remarks"),
+    updatedBy: (0, pg_core_1.uuid)("updated_by").references(() => exports.users.id),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
 });
 // ---------- orders ----------
-export const orders = pgTable("orders", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    orderNumber: varchar("order_number", { length: 50 }).notNull().unique(),
-    userId: uuid("user_id").references(() => users.id),
-    customerName: varchar("customer_name", { length: 255 }),
-    transactionSource: transactionSourceEnum("transaction_source").notNull().default("ONLINE"),
-    totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull().default("0"),
-    discount: decimal("discount", { precision: 12, scale: 2 }).notNull().default("0"),
-    voucherCode: varchar("voucher_code", { length: 50 }),
-    deliveryMethod: varchar("delivery_method", { length: 20 }).default("DELIVERY"),
-    deliveryAddress: text("delivery_address"),
-    paymentStatus: paymentStatusEnum("payment_status").notNull().default("UNPAID"),
-    orderStatus: orderStatusEnum("order_status").notNull().default("PENDING"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+exports.orders = (0, pg_core_1.pgTable)("orders", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    orderNumber: (0, pg_core_1.varchar)("order_number", { length: 50 }).notNull().unique(),
+    userId: (0, pg_core_1.uuid)("user_id").references(() => exports.users.id),
+    customerName: (0, pg_core_1.varchar)("customer_name", { length: 255 }),
+    transactionSource: (0, exports.transactionSourceEnum)("transaction_source").notNull().default("ONLINE"),
+    totalAmount: (0, pg_core_1.decimal)("total_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    discount: (0, pg_core_1.decimal)("discount", { precision: 12, scale: 2 }).notNull().default("0"),
+    voucherCode: (0, pg_core_1.varchar)("voucher_code", { length: 50 }),
+    deliveryMethod: (0, pg_core_1.varchar)("delivery_method", { length: 20 }).default("DELIVERY"),
+    deliveryAddress: (0, pg_core_1.text)("delivery_address"),
+    paymentStatus: (0, exports.paymentStatusEnum)("payment_status").notNull().default("UNPAID"),
+    orderStatus: (0, exports.orderStatusEnum)("order_status").notNull().default("PENDING"),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at").defaultNow().notNull(),
 });
 // ---------- order_items ----------
-export const orderItems = pgTable("order_items", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    orderId: uuid("order_id").notNull().references(() => orders.id),
-    productId: uuid("product_id").notNull().references(() => products.id),
-    quantity: integer("quantity").notNull(),
-    unitPrice: decimal("unit_price", { precision: 12, scale: 2 }).notNull(),
-    subtotal: decimal("subtotal", { precision: 12, scale: 2 }).notNull(),
+exports.orderItems = (0, pg_core_1.pgTable)("order_items", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    orderId: (0, pg_core_1.uuid)("order_id").notNull().references(() => exports.orders.id),
+    productId: (0, pg_core_1.uuid)("product_id").notNull().references(() => exports.products.id),
+    quantity: (0, pg_core_1.integer)("quantity").notNull(),
+    unitPrice: (0, pg_core_1.decimal)("unit_price", { precision: 12, scale: 2 }).notNull(),
+    subtotal: (0, pg_core_1.decimal)("subtotal", { precision: 12, scale: 2 }).notNull(),
 });
 // ---------- payments ----------
-export const payments = pgTable("payments", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    paymentReference: varchar("payment_reference", { length: 50 }).notNull().unique(),
-    userId: uuid("user_id").references(() => users.id),
-    orderId: uuid("order_id").references(() => orders.id),
-    repairId: uuid("repair_id").references(() => repairs.id),
-    paymentMethod: varchar("payment_method", { length: 50 }).notNull(),
-    paymentProvider: varchar("payment_provider", { length: 50 }),
-    amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
-    paymentStatus: paymentStatusEnum("payment_status").notNull().default("PENDING"),
-    providerTransactionId: varchar("provider_transaction_id", { length: 255 }),
-    paidAt: timestamp("paid_at"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+exports.payments = (0, pg_core_1.pgTable)("payments", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    paymentReference: (0, pg_core_1.varchar)("payment_reference", { length: 50 }).notNull().unique(),
+    userId: (0, pg_core_1.uuid)("user_id").references(() => exports.users.id),
+    orderId: (0, pg_core_1.uuid)("order_id").references(() => exports.orders.id),
+    repairId: (0, pg_core_1.uuid)("repair_id").references(() => exports.repairs.id),
+    paymentMethod: (0, pg_core_1.varchar)("payment_method", { length: 50 }).notNull(),
+    paymentProvider: (0, pg_core_1.varchar)("payment_provider", { length: 50 }),
+    amount: (0, pg_core_1.decimal)("amount", { precision: 12, scale: 2 }).notNull(),
+    paymentStatus: (0, exports.paymentStatusEnum)("payment_status").notNull().default("PENDING"),
+    providerTransactionId: (0, pg_core_1.varchar)("provider_transaction_id", { length: 255 }),
+    paidAt: (0, pg_core_1.timestamp)("paid_at"),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
 });
 // ---------- invoices ----------
-export const invoices = pgTable("invoices", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    invoiceNumber: varchar("invoice_number", { length: 50 }).notNull().unique(),
-    userId: uuid("user_id").references(() => users.id),
-    orderId: uuid("order_id").references(() => orders.id),
-    repairId: uuid("repair_id").references(() => repairs.id),
-    totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
-    amountPaid: decimal("amount_paid", { precision: 12, scale: 2 }).notNull().default("0"),
-    balance: decimal("balance", { precision: 12, scale: 2 }).notNull().default("0"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+exports.invoices = (0, pg_core_1.pgTable)("invoices", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    invoiceNumber: (0, pg_core_1.varchar)("invoice_number", { length: 50 }).notNull().unique(),
+    userId: (0, pg_core_1.uuid)("user_id").references(() => exports.users.id),
+    orderId: (0, pg_core_1.uuid)("order_id").references(() => exports.orders.id),
+    repairId: (0, pg_core_1.uuid)("repair_id").references(() => exports.repairs.id),
+    totalAmount: (0, pg_core_1.decimal)("total_amount", { precision: 12, scale: 2 }).notNull(),
+    amountPaid: (0, pg_core_1.decimal)("amount_paid", { precision: 12, scale: 2 }).notNull().default("0"),
+    balance: (0, pg_core_1.decimal)("balance", { precision: 12, scale: 2 }).notNull().default("0"),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
 });
 // ---------- receipts ----------
-export const receipts = pgTable("receipts", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    receiptNumber: varchar("receipt_number", { length: 50 }).notNull().unique(),
-    paymentId: uuid("payment_id").references(() => payments.id),
-    invoiceId: uuid("invoice_id").references(() => invoices.id),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+exports.receipts = (0, pg_core_1.pgTable)("receipts", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    receiptNumber: (0, pg_core_1.varchar)("receipt_number", { length: 50 }).notNull().unique(),
+    paymentId: (0, pg_core_1.uuid)("payment_id").references(() => exports.payments.id),
+    invoiceId: (0, pg_core_1.uuid)("invoice_id").references(() => exports.invoices.id),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
 });
 // ---------- refunds ----------
-export const refunds = pgTable("refunds", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    refundReference: varchar("refund_reference", { length: 50 }).notNull().unique(),
-    paymentId: uuid("payment_id").references(() => payments.id),
-    orderId: uuid("order_id").references(() => orders.id),
-    refundAmount: decimal("refund_amount", { precision: 12, scale: 2 }).notNull(),
-    refundMethod: varchar("refund_method", { length: 50 }),
-    refundReason: text("refund_reason"),
-    refundStatus: refundStatusEnum("refund_status").notNull().default("REQUESTED"),
-    processedBy: uuid("processed_by").references(() => users.id),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+exports.refunds = (0, pg_core_1.pgTable)("refunds", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    refundReference: (0, pg_core_1.varchar)("refund_reference", { length: 50 }).notNull().unique(),
+    paymentId: (0, pg_core_1.uuid)("payment_id").references(() => exports.payments.id),
+    orderId: (0, pg_core_1.uuid)("order_id").references(() => exports.orders.id),
+    refundAmount: (0, pg_core_1.decimal)("refund_amount", { precision: 12, scale: 2 }).notNull(),
+    refundMethod: (0, pg_core_1.varchar)("refund_method", { length: 50 }),
+    refundReason: (0, pg_core_1.text)("refund_reason"),
+    refundStatus: (0, exports.refundStatusEnum)("refund_status").notNull().default("REQUESTED"),
+    processedBy: (0, pg_core_1.uuid)("processed_by").references(() => exports.users.id),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at").defaultNow().notNull(),
 });
 // ---------- refund_history ----------
-export const refundHistory = pgTable("refund_history", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    refundId: uuid("refund_id").notNull().references(() => refunds.id),
-    previousStatus: refundStatusEnum("previous_status"),
-    newStatus: refundStatusEnum("new_status").notNull(),
-    remarks: text("remarks"),
-    updatedBy: uuid("updated_by").references(() => users.id),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+exports.refundHistory = (0, pg_core_1.pgTable)("refund_history", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    refundId: (0, pg_core_1.uuid)("refund_id").notNull().references(() => exports.refunds.id),
+    previousStatus: (0, exports.refundStatusEnum)("previous_status"),
+    newStatus: (0, exports.refundStatusEnum)("new_status").notNull(),
+    remarks: (0, pg_core_1.text)("remarks"),
+    updatedBy: (0, pg_core_1.uuid)("updated_by").references(() => exports.users.id),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
 });
 // ---------- cancellations ----------
-export const cancellations = pgTable("cancellations", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    orderId: uuid("order_id").references(() => orders.id),
-    repairId: uuid("repair_id").references(() => repairs.id),
-    reason: text("reason"),
-    cancellationStatus: cancellationStatusEnum("cancellation_status").notNull().default("REQUESTED"),
-    requestedBy: uuid("requested_by").references(() => users.id),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    processedAt: timestamp("processed_at"),
+exports.cancellations = (0, pg_core_1.pgTable)("cancellations", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    orderId: (0, pg_core_1.uuid)("order_id").references(() => exports.orders.id),
+    repairId: (0, pg_core_1.uuid)("repair_id").references(() => exports.repairs.id),
+    reason: (0, pg_core_1.text)("reason"),
+    cancellationStatus: (0, exports.cancellationStatusEnum)("cancellation_status").notNull().default("REQUESTED"),
+    requestedBy: (0, pg_core_1.uuid)("requested_by").references(() => exports.users.id),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
+    processedAt: (0, pg_core_1.timestamp)("processed_at"),
 });
 // ---------- reviews ----------
-export const reviews = pgTable("reviews", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id").notNull().references(() => users.id),
-    productId: uuid("product_id").references(() => products.id),
-    orderId: uuid("order_id").references(() => orders.id),
-    repairId: uuid("repair_id").references(() => repairs.id),
-    rating: integer("rating").notNull(),
-    title: varchar("title", { length: 255 }),
-    comment: text("comment"),
-    moderationStatus: moderationStatusEnum("moderation_status").notNull().default("PENDING"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+exports.reviews = (0, pg_core_1.pgTable)("reviews", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    userId: (0, pg_core_1.uuid)("user_id").notNull().references(() => exports.users.id),
+    productId: (0, pg_core_1.uuid)("product_id").references(() => exports.products.id),
+    orderId: (0, pg_core_1.uuid)("order_id").references(() => exports.orders.id),
+    repairId: (0, pg_core_1.uuid)("repair_id").references(() => exports.repairs.id),
+    rating: (0, pg_core_1.integer)("rating").notNull(),
+    title: (0, pg_core_1.varchar)("title", { length: 255 }),
+    comment: (0, pg_core_1.text)("comment"),
+    moderationStatus: (0, exports.moderationStatusEnum)("moderation_status").notNull().default("PENDING"),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at").defaultNow().notNull(),
 });
 // ---------- payment_events ----------
-export const paymentEvents = pgTable("payment_events", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    paymentId: uuid("payment_id").references(() => payments.id),
-    eventType: varchar("event_type", { length: 100 }).notNull(),
-    payload: text("payload"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+exports.paymentEvents = (0, pg_core_1.pgTable)("payment_events", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    paymentId: (0, pg_core_1.uuid)("payment_id").references(() => exports.payments.id),
+    eventType: (0, pg_core_1.varchar)("event_type", { length: 100 }).notNull(),
+    payload: (0, pg_core_1.text)("payload"),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
 });
 // ---------- cart_items ----------
-export const cartItems = pgTable("cart_items", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id").notNull().references(() => users.id),
-    productId: uuid("product_id").notNull().references(() => products.id),
-    quantity: integer("quantity").notNull().default(1),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+exports.cartItems = (0, pg_core_1.pgTable)("cart_items", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    userId: (0, pg_core_1.uuid)("user_id").notNull().references(() => exports.users.id),
+    productId: (0, pg_core_1.uuid)("product_id").notNull().references(() => exports.products.id),
+    quantity: (0, pg_core_1.integer)("quantity").notNull().default(1),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at").defaultNow().notNull(),
 });
 // ---------- notifications ----------
-export const notifications = pgTable("notifications", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id").notNull().references(() => users.id),
-    title: varchar("title", { length: 255 }).notNull(),
-    message: text("message").notNull(),
-    isRead: boolean("is_read").notNull().default(false),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+exports.notifications = (0, pg_core_1.pgTable)("notifications", {
+    id: (0, pg_core_1.uuid)("id").defaultRandom().primaryKey(),
+    userId: (0, pg_core_1.uuid)("user_id").notNull().references(() => exports.users.id),
+    title: (0, pg_core_1.varchar)("title", { length: 255 }).notNull(),
+    message: (0, pg_core_1.text)("message").notNull(),
+    isRead: (0, pg_core_1.boolean)("is_read").notNull().default(false),
+    createdAt: (0, pg_core_1.timestamp)("created_at").defaultNow().notNull(),
 });
 // ---------- relations ----------
-export const usersRelations = relations(users, ({ many }) => ({
-    repairs: many(repairs),
-    orders: many(orders),
-    payments: many(payments),
-    reviews: many(reviews),
-    notifications: many(notifications),
+exports.usersRelations = (0, drizzle_orm_1.relations)(exports.users, ({ many }) => ({
+    repairs: many(exports.repairs),
+    orders: many(exports.orders),
+    payments: many(exports.payments),
+    reviews: many(exports.reviews),
+    notifications: many(exports.notifications),
 }));
-export const productsRelations = relations(products, ({ many }) => ({
-    orderItems: many(orderItems),
-    movements: many(inventoryMovements),
+exports.productsRelations = (0, drizzle_orm_1.relations)(exports.products, ({ many }) => ({
+    orderItems: many(exports.orderItems),
+    movements: many(exports.inventoryMovements),
 }));
-export const repairsRelations = relations(repairs, ({ one, many }) => ({
-    user: one(users, { fields: [repairs.userId], references: [users.id] }),
-    payments: many(payments),
-    invoices: many(invoices),
-    statusHistory: many(repairStatusHistory),
+exports.repairsRelations = (0, drizzle_orm_1.relations)(exports.repairs, ({ one, many }) => ({
+    user: one(exports.users, { fields: [exports.repairs.userId], references: [exports.users.id] }),
+    payments: many(exports.payments),
+    invoices: many(exports.invoices),
+    statusHistory: many(exports.repairStatusHistory),
 }));
-export const ordersRelations = relations(orders, ({ one, many }) => ({
-    user: one(users, { fields: [orders.userId], references: [users.id] }),
-    items: many(orderItems),
-    payments: many(payments),
-    invoices: many(invoices),
+exports.ordersRelations = (0, drizzle_orm_1.relations)(exports.orders, ({ one, many }) => ({
+    user: one(exports.users, { fields: [exports.orders.userId], references: [exports.users.id] }),
+    items: many(exports.orderItems),
+    payments: many(exports.payments),
+    invoices: many(exports.invoices),
 }));
-export const orderItemsRelations = relations(orderItems, ({ one }) => ({
-    order: one(orders, { fields: [orderItems.orderId], references: [orders.id] }),
-    product: one(products, { fields: [orderItems.productId], references: [products.id] }),
+exports.orderItemsRelations = (0, drizzle_orm_1.relations)(exports.orderItems, ({ one }) => ({
+    order: one(exports.orders, { fields: [exports.orderItems.orderId], references: [exports.orders.id] }),
+    product: one(exports.products, { fields: [exports.orderItems.productId], references: [exports.products.id] }),
 }));
 //# sourceMappingURL=index.js.map

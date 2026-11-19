@@ -1,7 +1,9 @@
-import "dotenv/config";
-import { db } from "./db";
-import { repairs } from "./schema";
-import { eq } from "drizzle-orm";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv/config");
+const db_1 = require("./db");
+const schema_1 = require("./schema");
+const drizzle_orm_1 = require("drizzle-orm");
 const samples = [
     { ref: "RT-001", customer: "Mhegz Albarico", device: "Laptop", status: "IN_PROGRESS", tech: "John Reyes", cost: 1500 },
     { ref: "RT-002", customer: "Argel Padilla", device: "Desktop", status: "IN_PROGRESS", tech: "Norman Lim", cost: 1500 },
@@ -13,12 +15,12 @@ const samples = [
 ];
 async function run() {
     for (const s of samples) {
-        const existing = await db.select().from(repairs).where(eq(repairs.referenceNumber, s.ref));
+        const existing = await db_1.db.select().from(schema_1.repairs).where((0, drizzle_orm_1.eq)(schema_1.repairs.referenceNumber, s.ref));
         if (existing.length) {
             console.log("exists", s.ref);
             continue;
         }
-        await db.insert(repairs).values({
+        await db_1.db.insert(schema_1.repairs).values({
             referenceNumber: s.ref,
             transactionSource: "ONLINE",
             customerName: s.customer,

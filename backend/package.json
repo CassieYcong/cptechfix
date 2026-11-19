@@ -2,7 +2,7 @@
   "name": "cptechfix-backend",
   "version": "1.0.0",
   "description": "CP TechFix backend",
-  "main": "dist/index.js",
+  "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",

@@ -1,41 +1,43 @@
-import "dotenv/config";
-import { db } from "./db";
-import { users, products } from "./schema";
-import { hashPassword } from "./utils/auth";
-import { eq } from "drizzle-orm";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv/config");
+const db_1 = require("./db");
+const schema_1 = require("./schema");
+const auth_1 = require("./utils/auth");
+const drizzle_orm_1 = require("drizzle-orm");
 async function seed() {
     const adminEmail = "admin@cptechfix.com";
-    const existing = await db.select().from(users).where(eq(users.email, adminEmail));
+    const existing = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, adminEmail));
     if (!existing.length) {
-        await db.insert(users).values({
+        await db_1.db.insert(schema_1.users).values({
             fullName: "CP TechFix Admin",
             email: adminEmail,
             phoneNumber: "09000000000",
-            password: await hashPassword("Admin123!"),
+            password: await (0, auth_1.hashPassword)("Admin123!"),
             role: "ADMIN",
         });
         console.log("Admin created");
     }
     const staffEmail = "staff@cptechfix.com";
-    const existingStaff = await db.select().from(users).where(eq(users.email, staffEmail));
+    const existingStaff = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, staffEmail));
     if (!existingStaff.length) {
-        await db.insert(users).values({
+        await db_1.db.insert(schema_1.users).values({
             fullName: "CP TechFix Staff",
             email: staffEmail,
             phoneNumber: "09000000001",
-            password: await hashPassword("Staff123!"),
+            password: await (0, auth_1.hashPassword)("Staff123!"),
             role: "STAFF",
         });
         console.log("Staff created");
     }
     const customerEmail = "customer@cptechfix.com";
-    const existingC = await db.select().from(users).where(eq(users.email, customerEmail));
+    const existingC = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, customerEmail));
     if (!existingC.length) {
-        await db.insert(users).values({
+        await db_1.db.insert(schema_1.users).values({
             fullName: "Juan Dela Cruz",
             email: customerEmail,
             phoneNumber: "09171234567",
-            password: await hashPassword("Customer123!"),
+            password: await (0, auth_1.hashPassword)("Customer123!"),
             role: "CUSTOMER",
         });
         console.log("Customer created");
@@ -48,9 +50,9 @@ async function seed() {
         { sku: "ACC-005", productName: "Webcam HD", category: "Peripherals", sellingPrice: "1299.00", stock: 6, minimumStock: 2 },
     ];
     for (const p of sampleProducts) {
-        const ex = await db.select().from(products).where(eq(products.sku, p.sku));
+        const ex = await db_1.db.select().from(schema_1.products).where((0, drizzle_orm_1.eq)(schema_1.products.sku, p.sku));
         if (!ex.length) {
-            await db.insert(products).values({ ...p, costPrice: "0", description: p.productName });
+            await db_1.db.insert(schema_1.products).values({ ...p, costPrice: "0", description: p.productName });
         }
     }
     console.log("Seed complete");

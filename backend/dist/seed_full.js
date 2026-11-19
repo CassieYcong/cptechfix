@@ -1,9 +1,11 @@
-import "dotenv/config";
-import { db } from "./db";
-import { users, products, orders, orderItems, payments, repairs, repairStatusHistory, refunds, inventoryMovements, notifications, invoices, receipts, } from "./schema";
-import { eq } from "drizzle-orm";
-import { hashPassword } from "./utils/auth";
-import { genRef } from "./utils/gen";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv/config");
+const db_1 = require("./db");
+const schema_1 = require("./schema");
+const drizzle_orm_1 = require("drizzle-orm");
+const auth_1 = require("./utils/auth");
+const gen_1 = require("./utils/gen");
 const CATEGORIES = ["Laptop Parts", "Desktop Components", "Computer Accessories", "Storage Devices", "Networking Equipment", "Computer Peripherals", "Repair Tools"];
 const BRANDS = ["Samsung", "Kingston", "Logitech", "Asus", "Acer", "Dell", "HP", "Lenovo", "Seagate", "Western Digital", "TP-Link", "Razer", "Corsair", "MSI"];
 const PRODUCT_NAMES = [
@@ -54,34 +56,34 @@ function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return d; }
 async function seed() {
     // guard
-    const existingOrders = await db.select().from(orders);
+    const existingOrders = await db_1.db.select().from(schema_1.orders);
     if (existingOrders.length >= 20) {
         console.log("Seed already present (orders >= 20). Skipping.");
         process.exit(0);
     }
     // ensure admin/staff/customer exist
     const adminEmail = "admin@cptechfix.com";
-    let admin = (await db.select().from(users).where(eq(users.email, adminEmail)))[0];
+    let admin = (await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, adminEmail)))[0];
     if (!admin) {
-        [admin] = await db.insert(users).values({ fullName: "CP TechFix Admin", email: adminEmail, phoneNumber: "09000000000", password: await hashPassword("Admin123!"), role: "ADMIN" }).returning();
+        [admin] = await db_1.db.insert(schema_1.users).values({ fullName: "CP TechFix Admin", email: adminEmail, phoneNumber: "09000000000", password: await (0, auth_1.hashPassword)("Admin123!"), role: "ADMIN" }).returning();
     }
     const staffEmail = "staff@cptechfix.com";
-    let staff = (await db.select().from(users).where(eq(users.email, staffEmail)))[0];
+    let staff = (await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, staffEmail)))[0];
     if (!staff) {
-        [staff] = await db.insert(users).values({ fullName: "CP TechFix Staff", email: staffEmail, phoneNumber: "09000000001", password: await hashPassword("Staff123!"), role: "STAFF" }).returning();
+        [staff] = await db_1.db.insert(schema_1.users).values({ fullName: "CP TechFix Staff", email: staffEmail, phoneNumber: "09000000001", password: await (0, auth_1.hashPassword)("Staff123!"), role: "STAFF" }).returning();
     }
     const custEmail = "customer@cptechfix.com";
-    let cust0 = (await db.select().from(users).where(eq(users.email, custEmail)))[0];
+    let cust0 = (await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, custEmail)))[0];
     if (!cust0) {
-        [cust0] = await db.insert(users).values({ fullName: "Juan Dela Cruz", email: custEmail, phoneNumber: "09171234567", password: await hashPassword("Customer123!"), role: "CUSTOMER" }).returning();
+        [cust0] = await db_1.db.insert(schema_1.users).values({ fullName: "Juan Dela Cruz", email: custEmail, phoneNumber: "09171234567", password: await (0, auth_1.hashPassword)("Customer123!"), role: "CUSTOMER" }).returning();
     }
     // employees/technicians
     const techUsers = [];
     for (let i = 0; i < TECHNICIANS.length; i++) {
         const email = `tech${i + 1}@cptechfix.com`;
-        let u = (await db.select().from(users).where(eq(users.email, email)))[0];
+        let u = (await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email)))[0];
         if (!u) {
-            [u] = await db.insert(users).values({ fullName: TECHNICIANS[i], email, phoneNumber: `0918${1000000 + i}`, password: await hashPassword("Tech123!"), role: "STAFF" }).returning();
+            [u] = await db_1.db.insert(schema_1.users).values({ fullName: TECHNICIANS[i], email, phoneNumber: `0918${1000000 + i}`, password: await (0, auth_1.hashPassword)("Tech123!"), role: "STAFF" }).returning();
         }
         techUsers.push(u);
     }
@@ -89,9 +91,9 @@ async function seed() {
     const customers = [cust0];
     for (let i = 0; i < CUSTOMERS.length; i++) {
         const email = `customer${i + 1}@cptechfix.com`;
-        let u = (await db.select().from(users).where(eq(users.email, email)))[0];
+        let u = (await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email)))[0];
         if (!u) {
-            [u] = await db.insert(users).values({ fullName: CUSTOMERS[i], email, phoneNumber: `0917${2000000 + i}`, password: await hashPassword("Customer123!"), role: "CUSTOMER" }).returning();
+            [u] = await db_1.db.insert(schema_1.users).values({ fullName: CUSTOMERS[i], email, phoneNumber: `0917${2000000 + i}`, password: await (0, auth_1.hashPassword)("Customer123!"), role: "CUSTOMER" }).returning();
         }
         customers.push(u);
     }
@@ -100,9 +102,9 @@ async function seed() {
     for (let i = 0; i < PRODUCT_NAMES.length; i++) {
         const p = PRODUCT_NAMES[i];
         const sku = `SKU-${String(i + 1).padStart(3, "0")}`;
-        let ex = (await db.select().from(products).where(eq(products.sku, sku)))[0];
+        let ex = (await db_1.db.select().from(schema_1.products).where((0, drizzle_orm_1.eq)(schema_1.products.sku, sku)))[0];
         if (!ex) {
-            [ex] = await db.insert(products).values({
+            [ex] = await db_1.db.insert(schema_1.products).values({
                 sku,
                 productName: p.name,
                 description: `${p.name} - high quality ${p.cat.toLowerCase()} for your setup.`,
@@ -121,7 +123,7 @@ async function seed() {
     }
     // inventory movements for initial stock
     for (const p of insertedProducts) {
-        await db.insert(inventoryMovements).values({
+        await db_1.db.insert(schema_1.inventoryMovements).values({
             productId: p.id,
             movementType: "STOCK_IN",
             quantity: p.stock,
@@ -140,8 +142,8 @@ async function seed() {
         const status = pick(repairStatuses);
         const cost = rnd(500, 5000);
         const paid = status === "COMPLETED" ? cost : rnd(0, Math.floor(cost * 0.5));
-        const [r] = await db.insert(repairs).values({
-            referenceNumber: genRef("REP"),
+        const [r] = await db_1.db.insert(schema_1.repairs).values({
+            referenceNumber: (0, gen_1.genRef)("REP"),
             userId: c.id,
             transactionSource: i % 3 === 0 ? "WALK_IN" : "ONLINE",
             customerName: c.fullName,
@@ -160,7 +162,7 @@ async function seed() {
             status: status,
         }).returning();
         insertedRepairs.push(r);
-        await db.insert(repairStatusHistory).values({ repairId: r.id, status: r.status, remarks: "Seeded", updatedBy: admin.id });
+        await db_1.db.insert(schema_1.repairStatusHistory).values({ repairId: r.id, status: r.status, remarks: "Seeded", updatedBy: admin.id });
     }
     // orders + items + payments
     const orderStatuses = ["PENDING", "CONFIRMED", "PROCESSING", "READY_FOR_PICKUP", "COMPLETED", "CANCELLED"];
@@ -186,8 +188,8 @@ async function seed() {
         const total = Math.max(0, subtotal - discount);
         const status = pick(orderStatuses);
         const paymentStatus = status === "COMPLETED" ? "PAID" : (status === "CANCELLED" ? "FAILED" : "PENDING");
-        const [o] = await db.insert(orders).values({
-            orderNumber: genRef("ORD"),
+        const [o] = await db_1.db.insert(schema_1.orders).values({
+            orderNumber: (0, gen_1.genRef)("ORD"),
             userId: c.id,
             customerName: c.fullName,
             transactionSource: isWalkIn ? "WALK_IN" : "ONLINE",
@@ -202,13 +204,13 @@ async function seed() {
         }).returning();
         insertedOrders.push(o);
         for (const it of itemsData) {
-            await db.insert(orderItems).values({ orderId: o.id, productId: it.productId, quantity: it.quantity, unitPrice: it.unitPrice, subtotal: it.subtotal });
+            await db_1.db.insert(schema_1.orderItems).values({ orderId: o.id, productId: it.productId, quantity: it.quantity, unitPrice: it.unitPrice, subtotal: it.subtotal });
         }
         // payment record
         const method = pick(PAYMENT_METHODS);
         const payStatus = paymentStatus === "PAID" ? "PAID" : "PENDING";
-        const [pay] = await db.insert(payments).values({
-            paymentReference: genRef("PAY"),
+        const [pay] = await db_1.db.insert(schema_1.payments).values({
+            paymentReference: (0, gen_1.genRef)("PAY"),
             userId: c.id,
             orderId: o.id,
             paymentMethod: method,
@@ -218,8 +220,8 @@ async function seed() {
             paidAt: payStatus === "PAID" ? new Date() : null,
         }).returning();
         // invoice
-        const [inv] = await db.insert(invoices).values({
-            invoiceNumber: genRef("INV"),
+        const [inv] = await db_1.db.insert(schema_1.invoices).values({
+            invoiceNumber: (0, gen_1.genRef)("INV"),
             userId: c.id,
             orderId: o.id,
             totalAmount: String(total),
@@ -227,16 +229,16 @@ async function seed() {
             balance: String(payStatus === "PAID" ? 0 : total),
         }).returning();
         if (payStatus === "PAID") {
-            await db.insert(receipts).values({ receiptNumber: genRef("RCT"), paymentId: pay.id, invoiceId: inv.id });
+            await db_1.db.insert(schema_1.receipts).values({ receiptNumber: (0, gen_1.genRef)("RCT"), paymentId: pay.id, invoiceId: inv.id });
         }
         // decrement stock for completed
         if (status === "COMPLETED" || status === "PROCESSING" || status === "CONFIRMED") {
             for (const it of itemsData) {
-                const [p] = await db.select().from(products).where(eq(products.id, it.productId));
+                const [p] = await db_1.db.select().from(schema_1.products).where((0, drizzle_orm_1.eq)(schema_1.products.id, it.productId));
                 if (p) {
                     const newStock = Math.max(0, p.stock - it.quantity);
-                    await db.update(products).set({ stock: newStock, sold: (p.sold || 0) + it.quantity, updatedAt: new Date() }).where(eq(products.id, p.id));
-                    await db.insert(inventoryMovements).values({
+                    await db_1.db.update(schema_1.products).set({ stock: newStock, sold: (p.sold || 0) + it.quantity, updatedAt: new Date() }).where((0, drizzle_orm_1.eq)(schema_1.products.id, p.id));
+                    await db_1.db.insert(schema_1.inventoryMovements).values({
                         productId: p.id,
                         movementType: "SALE",
                         quantity: it.quantity,
@@ -255,10 +257,10 @@ async function seed() {
     // refunds (3)
     for (let i = 0; i < 3; i++) {
         const o = insertedOrders[i];
-        const [pay] = await db.select().from(payments).where(eq(payments.orderId, o.id));
+        const [pay] = await db_1.db.select().from(schema_1.payments).where((0, drizzle_orm_1.eq)(schema_1.payments.orderId, o.id));
         if (pay) {
-            await db.insert(refunds).values({
-                refundReference: genRef("REF"),
+            await db_1.db.insert(schema_1.refunds).values({
+                refundReference: (0, gen_1.genRef)("REF"),
                 paymentId: pay.id,
                 orderId: o.id,
                 refundAmount: String(Math.floor(Number(o.totalAmount) * 0.5)),
@@ -271,8 +273,8 @@ async function seed() {
     }
     // notifications for customers
     for (const c of customers.slice(0, 5)) {
-        await db.insert(notifications).values({ userId: c.id, title: "Welcome to CP TechFix", message: "Thanks for joining. Start shopping for accessories and repair services.", isRead: false });
-        await db.insert(notifications).values({ userId: c.id, title: "Order Update", message: "Your recent order has been confirmed.", isRead: false });
+        await db_1.db.insert(schema_1.notifications).values({ userId: c.id, title: "Welcome to CP TechFix", message: "Thanks for joining. Start shopping for accessories and repair services.", isRead: false });
+        await db_1.db.insert(schema_1.notifications).values({ userId: c.id, title: "Order Update", message: "Your recent order has been confirmed.", isRead: false });
     }
     console.log("Full seed complete.");
     console.log(`Customers: ${customers.length}, Products: ${insertedProducts.length}, Orders: ${insertedOrders.length}, Repairs: ${insertedRepairs.length}`);
