@@ -10,10 +10,11 @@ import crypto from "crypto";
 
 const router = Router();
 
+const optionalUuid = z.preprocess((v) => (v === "" || v === null ? undefined : v), z.string().uuid().optional());
 const paySchema = z.object({
-  orderId: z.string().uuid().optional(),
-  repairId: z.string().uuid().optional(),
-  amount: z.number().min(0.01),
+  orderId: optionalUuid,
+  repairId: optionalUuid,
+  amount: z.coerce.number().min(0.01),
   paymentMethod: z.string().min(1),
   paymentStatus: z.enum(["UNPAID","PENDING","PROCESSING","PARTIALLY_PAID","PAID","FAILED","EXPIRED","REFUNDED","PARTIALLY_REFUNDED"]).optional(),
 });
@@ -159,11 +160,25 @@ function mapPaymentMethod(method: string): string[] {
 }
 
 // Verify payment status (called by frontend success page)
-router.get("/verify/:id", authenticate, async (req: AuthRequest, res) => {
+router.get("/verify/:id", async (req: any, res) => {
   const [p] = await db.select().from(payments).where(eq(payments.id, req.params.id));
   if (!p) return res.status(404).json({ message: "Not found" });
-  if (p.userId !== req.user!.id && req.user!.role === "CUSTOMER") return res.status(403).json({ message: "Forbidden" });
-
+  // Sandbox payments can be verified without auth (dev/testing flow).
+  let user: any = null;
+  const authHeader = req.headers?.authorization;
+  if (authHeader) {
+    try {
+      const token = authHeader.replace(/^Bearer\s+/i, "");
+      const { verifyToken } = await import("../utils/auth");
+      user = verifyToken(token);
+    } catch { user = null; }
+  }
+  if (p.paymentProvider !== "SANDBOX") {
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+  }
+  if (user && user.role === "CUSTOMER" && p.userId && p.userId !== user.id) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
   if (p.paymentProvider === "PAYMONGO" && p.providerTransactionId) {
     const secret = paymongoSecret();
     if (secret) {

@@ -21,15 +21,24 @@ router.get("/:id", async (req, res) => {
 });
 router.post("/", async (req, res) => {
     const { fullName, email, phoneNumber, password, role } = req.body;
-    if (!fullName || !email)
+    const name = String(fullName || "").trim();
+    const em = String(email || "").trim();
+    const ph = String(phoneNumber || "").trim();
+    if (!name || !em)
         return res.status(400).json({ message: "Name and email are required" });
-    const [existing] = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email));
+    if (!/^[A-Za-z\s.'-]+$/.test(name))
+        return res.status(400).json({ message: "Name must contain letters only" });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em))
+        return res.status(400).json({ message: "Please enter a valid email address" });
+    if (ph && !/^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/.test(ph))
+        return res.status(400).json({ message: "Phone must start with 09 or +63 9XX XXX XXXX" });
+    const [existing] = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, em));
     if (existing)
         return res.status(400).json({ message: "Email already in use" });
     const hashed = await (0, auth_2.hashPassword)(password || "Password123!");
     // only admins may assign elevated roles
     const finalRole = req.user.role === "ADMIN" ? (role || "CUSTOMER") : "CUSTOMER";
-    const [u] = await db_1.db.insert(schema_1.users).values({ fullName, email, phoneNumber, password: hashed, role: finalRole }).returning();
+    const [u] = await db_1.db.insert(schema_1.users).values({ fullName: name, email: em, phoneNumber: ph || null, password: hashed, role: finalRole }).returning();
     res.status(201).json(publicUser(u));
 });
 router.put("/:id", async (req, res) => {
@@ -37,18 +46,34 @@ router.put("/:id", async (req, res) => {
     if (!existing)
         return res.status(404).json({ message: "Not found" });
     const { fullName, email, phoneNumber, role, password, profileImage } = req.body;
-    if (email && email !== existing.email) {
-        const [dupe] = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email));
+    const name = fullName !== undefined ? String(fullName).trim() : undefined;
+    const em = email !== undefined ? String(email).trim() : undefined;
+    const ph = phoneNumber !== undefined ? String(phoneNumber).trim() : undefined;
+    if (name !== undefined) {
+        if (!name)
+            return res.status(400).json({ message: "Name is required" });
+        if (!/^[A-Za-z\s.'-]+$/.test(name))
+            return res.status(400).json({ message: "Name must contain letters only" });
+    }
+    if (em !== undefined) {
+        if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em))
+            return res.status(400).json({ message: "Please enter a valid email address" });
+    }
+    if (ph !== undefined && ph && !/^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/.test(ph)) {
+        return res.status(400).json({ message: "Phone must start with 09 or +63 9XX XXX XXXX" });
+    }
+    if (em && em !== existing.email) {
+        const [dupe] = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, em));
         if (dupe)
             return res.status(400).json({ message: "Email already in use" });
     }
     const update = { updatedAt: new Date() };
-    if (fullName !== undefined)
-        update.fullName = fullName;
-    if (email !== undefined)
-        update.email = email;
-    if (phoneNumber !== undefined)
-        update.phoneNumber = phoneNumber;
+    if (name !== undefined)
+        update.fullName = name;
+    if (em !== undefined)
+        update.email = em;
+    if (ph !== undefined)
+        update.phoneNumber = ph || null;
     if (profileImage !== undefined)
         update.profileImage = profileImage ? String(profileImage) : null;
     if (role !== undefined && req.user.role === "ADMIN")

@@ -10,9 +10,10 @@ import { hashPassword } from "../utils/auth";
 const router = Router();
 router.use(authenticate, requireRole("ADMIN", "STAFF"));
 
+const phoneRegex = /^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/;
 const customerSchema = z.object({
-  fullName: z.string().min(2),
-  phoneNumber: z.string().optional(),
+  fullName: z.string().min(2).regex(/^[A-Za-z\s.'-]+$/, { message: "Name must contain letters only" }),
+  phoneNumber: z.string().optional().refine((v) => !v || phoneRegex.test(v), { message: "Phone must start with 09 or +63 9XX XXX XXXX" }),
   email: z.string().email().optional().or(z.literal("")),
 });
 

@@ -145,6 +145,9 @@ export const Profile: React.FC = () => {
   const [saving, setSaving] = React.useState(false);
   const [msg, setMsg] = React.useState("");
   const [err, setErr] = React.useState("");
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [changes, setChanges] = React.useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const fileRef = React.useRef<HTMLInputElement>(null);
 
   const resetForm = React.useCallback(() => {
@@ -180,11 +183,38 @@ export const Profile: React.FC = () => {
     }
   };
 
-  const save = async () => {
-    if (!form.fullName.trim()) { setErr("Full name is required."); return; }
+  const getChanges = () => {
+    const c: string[] = [];
+    if ((form.fullName || "").trim() !== (user?.fullName || "")) c.push(`Full Name: "${user?.fullName || ""}" → "${form.fullName.trim()}"`);
+    if ((form.email || "").trim() !== (user?.email || "")) c.push(`Email: "${user?.email || ""}" → "${form.email.trim()}"`);
+    if ((form.phoneNumber || "").trim() !== (user?.phoneNumber || "")) c.push(`Phone Number: "${user?.phoneNumber || ""}" → "${form.phoneNumber.trim()}"`);
+    if ((form.profileImage || "") !== (user?.profileImage || "")) c.push(form.profileImage ? "Profile Photo: updated" : "Profile Photo: removed");
+    return c;
+  };
+
+  const save = () => {
+    const name = form.fullName.trim();
+    const email = form.email.trim();
+    const phone = form.phoneNumber.trim();
+    const errs: Record<string, string> = {};
+    if (!name) errs.fullName = "Full name is required.";
+    else if (!/^[A-Za-z\s.'-]+$/.test(name)) errs.fullName = "Full name must contain letters only (no numbers or special characters).";
+    if (!email) errs.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = "Please enter a valid email address (e.g. name@email.com).";
+    if (phone && !/^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/.test(phone)) errs.phoneNumber = "Phone must start with 09 (e.g. 09171234567) or +63 9XX XXX XXXX.";
+    if (Object.keys(errs).length) { setFieldErrors(errs); setErr("Please fix the highlighted fields."); return; }
+    setFieldErrors({});
+    const c = getChanges();
+    if (c.length === 0) { setMsg("No changes to save."); return; }
+    setChanges(c);
+    setConfirmOpen(true);
+  };
+
+  const doSave = async () => {
+    setConfirmOpen(false);
     setSaving(true);
     try {
-      await api.put("/auth/me", form);
+      await api.put("/auth/me", { ...form, fullName: form.fullName.trim(), email: form.email.trim(), phoneNumber: form.phoneNumber.trim() });
       await refreshUser();
       setMsg("Profile updated");
     } catch (e: any) {
@@ -240,15 +270,31 @@ export const Profile: React.FC = () => {
           </div>
         </div>
 
-        <Input label="Full Name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
-        <Input label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-        <Input label="Phone Number" value={form.phoneNumber} onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })} />
+        <div>
+          <Input label="Full Name" value={form.fullName} className={fieldErrors.fullName ? "border-red-500 ring-2 ring-red-500/30" : ""} onChange={(e) => { setForm({ ...form, fullName: e.target.value.replace(/[^A-Za-z\s.'-]/g, "") }); setFieldErrors((p) => ({ ...p, fullName: "" })); }} />
+          {fieldErrors.fullName && <p className="text-xs text-red-600 -mt-3 mb-3">{fieldErrors.fullName}</p>}
+        </div>
+        <div>
+          <Input label="Email" type="email" value={form.email} className={fieldErrors.email ? "border-red-500 ring-2 ring-red-500/30" : ""} onChange={(e) => { setForm({ ...form, email: e.target.value }); setFieldErrors((p) => ({ ...p, email: "" })); }} />
+          {fieldErrors.email && <p className="text-xs text-red-600 -mt-3 mb-3">{fieldErrors.email}</p>}
+        </div>
+        <div>
+          <Input label="Phone Number" inputMode="numeric" value={form.phoneNumber} className={fieldErrors.phoneNumber ? "border-red-500 ring-2 ring-red-500/30" : ""} onChange={(e) => { setForm({ ...form, phoneNumber: e.target.value.replace(/[^0-9+\s]/g, "") }); setFieldErrors((p) => ({ ...p, phoneNumber: "" })); }} placeholder="09XXXXXXXXX or +63 9XX XXX XXXX" />
+          {fieldErrors.phoneNumber && <p className="text-xs text-red-600 -mt-3 mb-3">{fieldErrors.phoneNumber}</p>}
+        </div>
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={save} disabled={saving || uploading}>{saving ? "Saving..." : "Save Changes"}</Button>
           <Button variant="secondary" onClick={resetForm} disabled={saving}>Reset</Button>
         </div>
       </Card>
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={doSave}
+        title="Confirm Profile Changes"
+        message={<div><p className="mb-2">Are you sure you want to save these changes?</p><ul className="list-disc pl-5 space-y-1 text-sm">{changes.map((c, i) => <li key={i}>{c}</li>)}</ul></div>}
+      />
       <SuccessModal open={!!msg} onClose={() => setMsg("")} message={msg} />
       <ErrorModal open={!!err} onClose={() => setErr("")} message={err} />
     </div>

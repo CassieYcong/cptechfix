@@ -1,4 +1,13 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many attempts. Please try again later." },
+});
 import { z } from "zod";
 import { db } from "../db";
 import { users } from "../schema";
@@ -10,9 +19,9 @@ import { AuthRequest, authenticate } from "../middlewares/auth";
 const router = Router();
 
 const registerSchema = z.object({
-  fullName: z.string().min(2),
+  fullName: z.string().min(2).regex(/^[A-Za-z\s.'-]+$/, { message: "Name must contain letters only" }),
   email: z.string().email(),
-  phoneNumber: z.string().optional(),
+  phoneNumber: z.string().optional().refine((v) => !v || /^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/.test(v), { message: "Phone must start with 09 or +63 9XX XXX XXXX" }),
   password: z.string().min(6),
   confirmPassword: z.string().min(6),
 }).refine((d) => d.password === d.confirmPassword, { message: "Passwords must match", path: ["confirmPassword"] });
@@ -31,7 +40,7 @@ const publicUser = (u: any) => ({
   role: u.role,
 });
 
-router.post("/register", validate(registerSchema), async (req, res) => {
+router.post("/register", authLimiter, validate(registerSchema), async (req, res) => {
   try {
     const { fullName, email, phoneNumber, password } = req.body;
     const existing = await db.select().from(users).where(eq(users.email, email));
@@ -47,7 +56,7 @@ router.post("/register", validate(registerSchema), async (req, res) => {
   }
 });
 
-router.post("/login", validate(loginSchema), async (req, res) => {
+router.post("/login", authLimiter, validate(loginSchema), async (req, res) => {
   try {
     const { email, password } = req.body;
     const [user] = await db.select().from(users).where(eq(users.email, email));
@@ -80,11 +89,21 @@ router.put("/me", authenticate, async (req: AuthRequest, res) => {
 
   const update: any = { updatedAt: new Date() };
   if (fullName !== undefined) {
-    if (!String(fullName).trim()) return res.status(400).json({ message: "Full name is required" });
-    update.fullName = String(fullName).trim();
+    const name = String(fullName).trim();
+    if (!name) return res.status(400).json({ message: "Full name is required" });
+    if (!/^[A-Za-z\s.'-]+$/.test(name)) return res.status(400).json({ message: "Full name must contain letters only" });
+    update.fullName = name;
   }
-  if (email !== undefined) update.email = email;
-  if (phoneNumber !== undefined) update.phoneNumber = phoneNumber;
+  if (email !== undefined) {
+    const em = String(email).trim();
+    if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return res.status(400).json({ message: "Please enter a valid email address" });
+    update.email = em;
+  }
+  if (phoneNumber !== undefined) {
+    const ph = String(phoneNumber).trim();
+    if (ph && !/^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/.test(ph)) return res.status(400).json({ message: "Phone must start with 09 or +63 9XX XXX XXXX" });
+    update.phoneNumber = ph;
+  }
   if (profileImage !== undefined) update.profileImage = profileImage ? String(profileImage) : null;
 
   const [user] = await db.update(users).set(update).where(eq(users.id, req.user!.id)).returning();

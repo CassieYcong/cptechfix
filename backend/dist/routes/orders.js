@@ -16,7 +16,7 @@ const itemSchema = zod_1.z.object({
 const orderSchema = zod_1.z.object({
     items: zod_1.z.array(itemSchema).min(1),
     transactionSource: zod_1.z.enum(["ONLINE", "WALK_IN"]).optional(),
-    customerName: zod_1.z.string().optional(),
+    customerName: zod_1.z.string().optional().refine((v) => !v || /^[A-Za-z\s.'-]+$/.test(v), { message: "Name must contain letters only" }),
     paymentMethod: zod_1.z.string().optional(),
     amountPaid: zod_1.z.number().min(0).optional(),
     userId: zod_1.z.string().uuid().optional(),

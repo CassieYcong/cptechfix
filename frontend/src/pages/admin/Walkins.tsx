@@ -2,9 +2,55 @@ import React from "react";
 import api from "../../lib/axios";
 import { Card, Button, Input, Textarea, Select, Badge } from "../../components/ui";
 import { Modal, ConfirmDialog, SuccessModal, ErrorModal } from "../../components/ui/Modal";
-import { Wrench, ShoppingBag, Loader2, RefreshCw } from "lucide-react";
+import { Wrench, ShoppingBag, Loader2, RefreshCw, Smartphone, Laptop, Monitor, Tablet, Printer, Cog } from "lucide-react";
+
+const deviceIcon = (deviceType: string) => {
+  const d = (deviceType || "").toLowerCase();
+  if (d.includes("laptop")) return <Laptop size={16} />;
+  if (d.includes("desktop") || d.includes("computer") || d.includes("pc")) return <Monitor size={16} />;
+  if (d.includes("phone") || d.includes("mobile")) return <Smartphone size={16} />;
+  if (d.includes("tablet") || d.includes("ipad")) return <Tablet size={16} />;
+  if (d.includes("printer")) return <Printer size={16} />;
+  if (d.includes("monitor")) return <Monitor size={16} />;
+  return <Cog size={16} />;
+};
 
 const dateInput = (v: any) => (v ? String(v).slice(0, 10) : "");
+
+const SERVICE_TYPES = ["Screen Replacement", "Battery Replacement", "Charging Port Repair", "Keyboard Replacement", "Motherboard Repair", "Data Recovery", "Virus Removal", "Hardware Upgrade", "Cleaning & Maintenance", "Diagnostics", "Other"];
+
+const TECHNICIANS = [
+  { name: "Alex Cruz", expertise: "Screen Replacement" },
+  { name: "Ben Santos", expertise: "Motherboard Repair" },
+  { name: "Carlo Reyes", expertise: "Data Recovery" },
+  { name: "Diana Lim", expertise: "Hardware Upgrade" },
+  { name: "Eric Tan", expertise: "Diagnostics" },
+];
+
+const SERVICE_COST: Record<string, number> = {
+  "Screen Replacement": 2500,
+  "Battery Replacement": 1500,
+  "Charging Port Repair": 800,
+  "Keyboard Replacement": 1200,
+  "Motherboard Repair": 4500,
+  "Data Recovery": 3000,
+  "Virus Removal": 600,
+  "Hardware Upgrade": 2000,
+  "Cleaning & Maintenance": 400,
+  "Diagnostics": 400,
+  "Other": 400,
+};
+
+const validatePhone = (phone: string) => {
+  const p = (phone || "").trim();
+  if (!p) return true;
+  return /^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/.test(p);
+};
+
+const autoTechnician = (serviceType: string) => {
+  const t = TECHNICIANS.find((x) => x.expertise === serviceType);
+  return t ? t.name : "";
+};
 const fmtDate = (v: any) => {
   if (!v) return "—";
   const d = new Date(v);
@@ -32,11 +78,16 @@ export const Walkins: React.FC = () => {
   const [custOpen, setCustOpen] = React.useState(false);
   const [repairOpen, setRepairOpen] = React.useState(false);
   const [saleOpen, setSaleOpen] = React.useState(false);
+  const [confirmCreateRepair, setConfirmCreateRepair] = React.useState(false);
+  const [confirmCreateSale, setConfirmCreateSale] = React.useState(false);
+  const [confirmSaveRepair, setConfirmSaveRepair] = React.useState(false);
+  const [confirmSaveSale, setConfirmSaveSale] = React.useState(false);
   const [editRepair, setEditRepair] = React.useState<any>(null);
   const [editSale, setEditSale] = React.useState<any>(null);
   const [del, setDel] = React.useState<{ type: "repair" | "sale"; id: string } | null>(null);
   const [msg, setMsg] = React.useState("");
   const [err, setErr] = React.useState("");
+  const [formErrors, setFormErrors] = React.useState<Record<string, string | undefined>>({});
 
   const [cust, setCust] = React.useState({ fullName: "", phoneNumber: "", email: "" });
   const [repair, setRepair] = React.useState({ customerName: "", contactNumber: "", deviceType: "", brand: "", model: "", problemDescription: "", repairCost: "", amountPaid: "", serviceType: "", technician: "", expectedCompletionDate: "" });
@@ -59,11 +110,27 @@ export const Walkins: React.FC = () => {
   React.useEffect(() => { load(); }, []);
 
   const regCust = async () => {
+    const errs: Record<string, string> = {};
+    if (!cust.fullName.trim()) errs.cust_fullName = "Name is required.";
+    else if (!/^[A-Za-z\s.'-]+$/.test(cust.fullName.trim())) errs.cust_fullName = "Name must contain letters only.";
+    if (cust.phoneNumber && !/^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/.test(cust.phoneNumber.trim())) errs.cust_phoneNumber = "Phone must start with 09 or +63 9XX XXX XXXX.";
+    if (cust.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cust.email.trim())) errs.cust_email = "Please enter a valid email address (e.g. name@email.com).";
+    if (Object.keys(errs).length) { setFormErrors((p) => ({ ...p, ...errs })); return; }
+    setFormErrors((p) => { const n = { ...p }; delete n.cust_fullName; delete n.cust_phoneNumber; delete n.cust_email; return n; });
     try { await api.post("/walk-ins/customers", cust); setCustOpen(false); setCust({ fullName: "", phoneNumber: "", email: "" }); setMsg("Customer registered"); load(); }
     catch (e: any) { setErr(e.response?.data?.message || "Failed"); }
   };
 
   const createRepair = async () => {
+    const errs: Record<string, string> = {};
+    if (!repair.customerName.trim()) errs.customerName = "Customer name is required.";
+    else if (!/^[A-Za-z\\s.'-]+$/.test(repair.customerName.trim())) errs.customerName = "Name must contain letters only.";
+    if (repair.contactNumber && !validatePhone(repair.contactNumber)) errs.contactNumber = "Phone must start with 09 or +63 9XX XXX XXXX.";
+    if (!repair.deviceType.trim()) errs.deviceType = "Device type is required.";
+    if (!repair.serviceType) errs.serviceType = "Service type is required.";
+    if (Number(repair.repairCost) > 0 && Number(repair.repairCost) < 400) errs.repairCost = "Minimum repair cost is ₱400.";
+    if (Object.keys(errs).length) { setFormErrors(errs); setErr("Please fix the highlighted fields."); return; }
+    setFormErrors({});
     try {
       await api.post("/repairs", { ...repair, transactionSource: "WALK_IN", repairCost: repair.repairCost === "" ? 0 : Number(repair.repairCost), amountPaid: repair.amountPaid === "" ? 0 : Number(repair.amountPaid) });
       setRepairOpen(false); setMsg("Walk-in repair created"); load();
@@ -97,6 +164,11 @@ export const Walkins: React.FC = () => {
 
   const saveRepair = async () => {
     if (!editRepair) return;
+    const orig = repairs.find((r: any) => r.id === editRepair.id);
+    if (orig?.status === "COMPLETED" && !(Number(editRepair.amountPaid) > 0)) {
+      setErr("Please enter the amount paid before saving this completed repair."); return;
+    }
+    if (Number(editRepair.repairCost) > 0 && Number(editRepair.repairCost) < 400) { setErr("Minimum repair cost is ₱400."); return; }
     try {
       const { id, ...payload } = editRepair;
       await api.put(`/repairs/${id}`, { ...payload, repairCost: payload.repairCost === "" ? 0 : Number(payload.repairCost), amountPaid: payload.amountPaid === "" ? 0 : Number(payload.amountPaid) });
@@ -121,6 +193,10 @@ export const Walkins: React.FC = () => {
   };
 
   const updateRepairStatus = async (id: string, status: string) => {
+    const r = repairs.find((x: any) => x.id === id);
+    if (status === "COMPLETED" && !(r?.technician)) {
+      setErr("Please assign a technician before completing this repair."); return;
+    }
     try { await api.patch(`/repairs/${id}/status`, { status }); setMsg("Status updated"); load(); }
     catch (e: any) { setErr(e.response?.data?.message || "Failed"); }
   };
@@ -161,7 +237,7 @@ export const Walkins: React.FC = () => {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button onClick={() => setCustOpen(true)}>Register Customer</Button>
+        <Button onClick={() => { setFormErrors((p) => { const n = { ...p }; delete n.cust_fullName; delete n.cust_phoneNumber; delete n.cust_email; return n; }); setCustOpen(true); }}>Register Customer</Button>
         <Button onClick={() => setRepairOpen(true)}>New Walk-in Repair</Button>
         <Button onClick={() => setSaleOpen(true)}>New Walk-in Sale</Button>
       </div>
@@ -357,22 +433,65 @@ export const Walkins: React.FC = () => {
         )}
       </Card>
 
-      <Modal open={custOpen} onClose={() => setCustOpen(false)} title="Register Walk-in Customer">
-        <Input label="Name" value={cust.fullName} onChange={(e) => setCust({ ...cust, fullName: e.target.value })} />
-        <Input label="Phone" value={cust.phoneNumber} onChange={(e) => setCust({ ...cust, phoneNumber: e.target.value })} />
-        <Input label="Email (optional)" value={cust.email} onChange={(e) => setCust({ ...cust, email: e.target.value })} />
+      <Modal open={custOpen} onClose={() => { setCustOpen(false); setFormErrors((p) => { const n = { ...p }; delete n.cust_fullName; delete n.cust_phoneNumber; delete n.cust_email; return n; }); }} title="Register Walk-in Customer">
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Name <span className="text-red-500">*</span></label>
+          <input className={"w-full border rounded-lg px-3.5 py-2.5 text-sm " + (formErrors.cust_fullName ? "border-red-500 ring-2 ring-red-500/30" : "border-slate-200")} value={cust.fullName} onChange={(e) => { setCust({ ...cust, fullName: e.target.value.replace(/[^A-Za-z\s.'-]/g, "") }); setFormErrors((p) => ({ ...p, cust_fullName: undefined })); }} placeholder="Letters only" />
+          {formErrors.cust_fullName && <p className="text-xs text-red-600 mt-1">{formErrors.cust_fullName}</p>}
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone</label>
+          <input inputMode="numeric" className={"w-full border rounded-lg px-3.5 py-2.5 text-sm " + (formErrors.cust_phoneNumber ? "border-red-500 ring-2 ring-red-500/30" : "border-slate-200")} value={cust.phoneNumber} onChange={(e) => { setCust({ ...cust, phoneNumber: e.target.value.replace(/[^0-9+\s]/g, "") }); setFormErrors((p) => ({ ...p, cust_phoneNumber: undefined })); }} placeholder="09XXXXXXXXX or +63 9XX XXX XXXX" />
+          {formErrors.cust_phoneNumber && <p className="text-xs text-red-600 mt-1">{formErrors.cust_phoneNumber}</p>}
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Email (optional)</label>
+          <input type="email" className={"w-full border rounded-lg px-3.5 py-2.5 text-sm " + (formErrors.cust_email ? "border-red-500 ring-2 ring-red-500/30" : "border-slate-200")} value={cust.email} onChange={(e) => { setCust({ ...cust, email: e.target.value }); setFormErrors((p) => ({ ...p, cust_email: undefined })); }} placeholder="name@email.com" />
+          {formErrors.cust_email && <p className="text-xs text-red-600 mt-1">{formErrors.cust_email}</p>}
+        </div>
         <Button onClick={regCust}>Register</Button>
       </Modal>
 
       <Modal open={repairOpen} onClose={() => setRepairOpen(false)} title="New Walk-in Repair" size="max-w-2xl">
-        <Input label="Customer Name" value={repair.customerName} onChange={(e) => setRepair({ ...repair, customerName: e.target.value })} />
-        <Input label="Contact Number" value={repair.contactNumber} onChange={(e) => setRepair({ ...repair, contactNumber: e.target.value })} />
-        <Input label="Device Type" value={repair.deviceType} onChange={(e) => setRepair({ ...repair, deviceType: e.target.value })} />
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Customer Name <span className="text-red-500">*</span></label>
+          <input className={"w-full border rounded-lg px-3.5 py-2.5 text-sm " + (formErrors.customerName ? "border-red-500 ring-2 ring-red-500/30" : "border-slate-200")} value={repair.customerName} onChange={(e) => { setRepair({ ...repair, customerName: e.target.value.replace(/[^A-Za-z\\s.'-]/g, "") }); setFormErrors((p) => ({ ...p, customerName: undefined })); }} placeholder="Letters only" />
+          {formErrors.customerName && <p className="text-xs text-red-600 mt-1">{formErrors.customerName}</p>}
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Contact Number</label>
+          <input className={"w-full border rounded-lg px-3.5 py-2.5 text-sm " + (formErrors.contactNumber ? "border-red-500 ring-2 ring-red-500/30" : "border-slate-200")} inputMode="numeric" value={repair.contactNumber} onChange={(e) => { setRepair({ ...repair, contactNumber: e.target.value.replace(/[^0-9+\\s]/g, "") }); setFormErrors((p) => ({ ...p, contactNumber: undefined })); }} placeholder="09XXXXXXXXX or +63 9XX XXX XXXX" />
+          {formErrors.contactNumber && <p className="text-xs text-red-600 mt-1">{formErrors.contactNumber}</p>}
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Device Type <span className="text-red-500">*</span></label>
+          <input className={"w-full border rounded-lg px-3.5 py-2.5 text-sm " + (formErrors.deviceType ? "border-red-500 ring-2 ring-red-500/30" : "border-slate-200")} value={repair.deviceType} onChange={(e) => { setRepair({ ...repair, deviceType: e.target.value }); setFormErrors((p) => ({ ...p, deviceType: undefined })); }} placeholder="Laptop, Desktop, Phone..." />
+          {formErrors.deviceType && <p className="text-xs text-red-600 mt-1">{formErrors.deviceType}</p>}
+        </div>
         <Input label="Brand" value={repair.brand} onChange={(e) => setRepair({ ...repair, brand: e.target.value })} />
         <Input label="Model" value={repair.model} onChange={(e) => setRepair({ ...repair, model: e.target.value })} />
         <Textarea label="Problem" value={repair.problemDescription} onChange={(e) => setRepair({ ...repair, problemDescription: e.target.value })} />
-        <Input label="Service Type" value={repair.serviceType} onChange={(e) => setRepair({ ...repair, serviceType: e.target.value })} />
-        <Input label="Technician" value={repair.technician} onChange={(e) => setRepair({ ...repair, technician: e.target.value })} />
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Service Type</label>
+          <select
+            value={repair.serviceType}
+            onChange={(e) => {
+              const st = e.target.value;
+              setRepair({ ...repair, serviceType: st, technician: autoTechnician(st) || repair.technician, repairCost: SERVICE_COST[st] ? String(SERVICE_COST[st]) : repair.repairCost });
+            }}
+            className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm"
+          >
+            <option value="">Select service type</option>
+            {SERVICE_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Technician</label>
+          <select value={repair.technician} onChange={(e) => setRepair({ ...repair, technician: e.target.value })} className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm">
+            <option value="">Select technician</option>
+            {TECHNICIANS.map((t) => <option key={t.name} value={t.name}>{t.name} — {t.expertise}</option>)}
+          </select>
+        </div>
         <Input label="Expected Completion" type="date" value={repair.expectedCompletionDate} onChange={(e) => setRepair({ ...repair, expectedCompletionDate: e.target.value })} />
         <div className="mb-4">
           <label className="block text-sm font-medium text-slate-700 mb-1.5">Repair Cost</label>
@@ -382,8 +501,10 @@ export const Walkins: React.FC = () => {
           <label className="block text-sm font-medium text-slate-700 mb-1.5">Amount Paid</label>
           <input className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm" inputMode="decimal" value={repair.amountPaid} onChange={(e) => setRepair({ ...repair, amountPaid: e.target.value.replace(/[^0-9.]/g, "") })} placeholder="Type amount" />
         </div>
-        <Button onClick={createRepair}>Create</Button>
+        <Button onClick={() => setConfirmCreateRepair(true)}>Create</Button>
       </Modal>
+
+      <ConfirmDialog open={confirmCreateRepair} onClose={() => setConfirmCreateRepair(false)} onConfirm={() => { setConfirmCreateRepair(false); createRepair(); }} title="Confirm Create" message="Create this walk-in repair?" />
 
       <Modal open={!!editRepair} onClose={() => setEditRepair(null)} title="Edit Walk-in Repair" size="max-w-2xl">
         {editRepair && (
@@ -394,8 +515,27 @@ export const Walkins: React.FC = () => {
             <Input label="Brand" value={editRepair.brand} onChange={(e) => setEditRepair({ ...editRepair, brand: e.target.value })} />
             <Input label="Model" value={editRepair.model} onChange={(e) => setEditRepair({ ...editRepair, model: e.target.value })} />
             <Textarea label="Problem" value={editRepair.problemDescription} onChange={(e) => setEditRepair({ ...editRepair, problemDescription: e.target.value })} />
-            <Input label="Service Type" value={editRepair.serviceType} onChange={(e) => setEditRepair({ ...editRepair, serviceType: e.target.value })} />
-            <Input label="Technician" value={editRepair.technician} onChange={(e) => setEditRepair({ ...editRepair, technician: e.target.value })} />
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Service Type</label>
+              <select
+                value={editRepair.serviceType}
+                onChange={(e) => {
+                  const st = e.target.value;
+                  setEditRepair({ ...editRepair, serviceType: st, technician: autoTechnician(st) || editRepair.technician });
+                }}
+                className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm"
+              >
+                <option value="">Select service type</option>
+                {SERVICE_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Technician</label>
+              <select value={editRepair.technician} onChange={(e) => setEditRepair({ ...editRepair, technician: e.target.value })} className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm">
+                <option value="">Select technician</option>
+                {TECHNICIANS.map((t) => <option key={t.name} value={t.name}>{t.name} — {t.expertise}</option>)}
+              </select>
+            </div>
             <Input label="Expected Completion" type="date" value={editRepair.expectedCompletionDate} onChange={(e) => setEditRepair({ ...editRepair, expectedCompletionDate: e.target.value })} />
             <div className="mb-4">
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Repair Cost</label>
@@ -407,11 +547,13 @@ export const Walkins: React.FC = () => {
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setEditRepair(null)}>Cancel</Button>
-              <Button onClick={saveRepair}>Save Changes</Button>
+              <Button onClick={() => setConfirmSaveRepair(true)}>Save Changes</Button>
             </div>
           </>
         )}
       </Modal>
+
+      <ConfirmDialog open={confirmSaveRepair} onClose={() => setConfirmSaveRepair(false)} onConfirm={() => { setConfirmSaveRepair(false); saveRepair(); }} title="Confirm Update" message="Save changes to this walk-in repair?" />
 
       <Modal open={saleOpen} onClose={() => setSaleOpen(false)} title="New Walk-in Sale">
         <Input label="Customer Name" value={sale.customerName} onChange={(e) => setSale({ ...sale, customerName: e.target.value })} />
@@ -430,8 +572,10 @@ export const Walkins: React.FC = () => {
           <label className="block text-sm font-medium text-slate-700 mb-1.5">Amount Paid</label>
           <input className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm" inputMode="decimal" value={sale.amountPaid} onChange={(e) => setSale({ ...sale, amountPaid: e.target.value.replace(/[^0-9.]/g, "") })} placeholder="Type amount" />
         </div>
-        <Button onClick={createSale}>Complete Sale</Button>
+        <Button onClick={() => setConfirmCreateSale(true)}>Complete Sale</Button>
       </Modal>
+
+      <ConfirmDialog open={confirmCreateSale} onClose={() => setConfirmCreateSale(false)} onConfirm={() => { setConfirmCreateSale(false); createSale(); }} title="Confirm Sale" message="Complete this walk-in sale?" />
 
       <Modal open={!!editSale} onClose={() => setEditSale(null)} title="Edit Walk-in Sale">
         {editSale && (
@@ -444,11 +588,13 @@ export const Walkins: React.FC = () => {
             <Input label="Delivery Address" value={editSale.deliveryAddress} onChange={(e) => setEditSale({ ...editSale, deliveryAddress: e.target.value })} />
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setEditSale(null)}>Cancel</Button>
-              <Button onClick={saveSale}>Save Changes</Button>
+              <Button onClick={() => setConfirmSaveSale(true)}>Save Changes</Button>
             </div>
           </>
         )}
       </Modal>
+
+      <ConfirmDialog open={confirmSaveSale} onClose={() => setConfirmSaveSale(false)} onConfirm={() => { setConfirmSaveSale(false); saveSale(); }} title="Confirm Update" message="Save changes to this walk-in sale?" />
 
       <ConfirmDialog
         open={!!del}

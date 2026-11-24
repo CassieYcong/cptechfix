@@ -27,7 +27,7 @@ export const AdminReports: React.FC = () => {
           <input type="date" className="border border-slate-200 rounded-lg p-2 text-sm" value={from} onChange={(e) => setFrom(e.target.value)} />
           <input type="date" className="border border-slate-200 rounded-lg p-2 text-sm" value={to} onChange={(e) => setTo(e.target.value)} />
           <Button onClick={load}>Filter</Button>
-          <Button variant="secondary" onClick={() => window.open("http://localhost:5000/api/reports/export", "_blank")}>Export CSV</Button>
+          <Button variant="secondary" onClick={async () => { try { const r = await api.get("/reports/export", { responseType: "blob" }); const url = URL.createObjectURL(new Blob([r.data], { type: "text/csv" })); const a = document.createElement("a"); a.href = url; a.download = "cptechfix-report.csv"; a.click(); URL.revokeObjectURL(url); } catch { /* ignore */ } }}>Export CSV</Button>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -1,5 +1,6 @@
 import React from "react";
 import api from "../../lib/axios";
+import { mediaUrl } from "../../lib/media";
 import { Card, Button, Badge, Input, Select } from "../../components/ui";
 import { Modal, ConfirmDialog, SuccessModal, ErrorModal } from "../../components/ui/Modal";
 import { Star, Search, Filter } from "lucide-react";
@@ -7,8 +8,10 @@ import { Star, Search, Filter } from "lucide-react";
 export const AdminReviews: React.FC = () => {
   const [reviews, setReviews] = React.useState<any[]>([]);
   const [edit, setEdit] = React.useState<any>(null);
+  const [confirmSave, setConfirmSave] = React.useState(false);
   const [form, setForm] = React.useState({ rating: 5, title: "", comment: "" });
   const [delId, setDelId] = React.useState<string | null>(null);
+  const [pendingModeration, setPendingModeration] = React.useState<{ id: string; status: string; customer: string } | null>(null);
   const [msg, setMsg] = React.useState("");
   const [err, setErr] = React.useState("");
 
@@ -118,7 +121,7 @@ export const AdminReviews: React.FC = () => {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex gap-3 min-w-0 flex-1">
                 <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center">
-                  {r.user?.profileImage ? <img src={r.user.profileImage.startsWith("http") ? r.user.profileImage : "http://localhost:5000" + r.user.profileImage} alt="" className="w-full h-full object-cover" /> : <span className="text-slate-400 text-sm">{(r.user?.fullName || "?").charAt(0)}</span>}
+                  {r.user?.profileImage ? <img src={mediaUrl(r.user.profileImage)} alt="" className="w-full h-full object-cover" /> : <span className="text-slate-400 text-sm">{(r.user?.fullName || "?").charAt(0)}</span>}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -134,8 +137,8 @@ export const AdminReviews: React.FC = () => {
               <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                 {statusLabel(r.moderationStatus) === "Pending" && (
                   <>
-                    <Button size="sm" variant="secondary" onClick={() => moderate(r.id, "APPROVED")}>Approve</Button>
-                    <Button size="sm" variant="danger" onClick={() => moderate(r.id, "REJECTED")}>Reject</Button>
+                    <Button size="sm" variant="secondary" onClick={() => setPendingModeration({ id: r.id, status: "APPROVED", customer: r.user?.fullName || "this customer" })}>Approve</Button>
+                    <Button size="sm" variant="danger" onClick={() => setPendingModeration({ id: r.id, status: "REJECTED", customer: r.user?.fullName || "this customer" })}>Reject</Button>
                   </>
                 )}
                 <Button variant="secondary" size="sm" onClick={() => openEdit(r)}>Edit</Button>
@@ -163,9 +166,12 @@ export const AdminReviews: React.FC = () => {
         <textarea className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm mb-3" rows={4} value={form.comment} onChange={(e) => setForm({ ...form, comment: e.target.value })} />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setEdit(null)}>Cancel</Button>
-          <Button onClick={save}>Save Changes</Button>
+          <Button onClick={() => setConfirmSave(true)}>Save Changes</Button>
         </div>
       </Modal>
+
+      <ConfirmDialog open={confirmSave} onClose={() => setConfirmSave(false)} onConfirm={() => { setConfirmSave(false); save(); }} title="Confirm Update" message="Save changes to this review?" />
+      <ConfirmDialog open={!!pendingModeration} onClose={() => setPendingModeration(null)} onConfirm={() => { if (pendingModeration) { moderate(pendingModeration.id, pendingModeration.status); setPendingModeration(null); } }} title={pendingModeration?.status === "APPROVED" ? "Approve Review" : "Reject Review"} message={pendingModeration ? `Are you sure you want to ${pendingModeration.status === "APPROVED" ? "approve" : "reject"} the review from ${pendingModeration.customer}?` : ""} />
 
       <ConfirmDialog open={!!delId} onClose={() => setDelId(null)} onConfirm={doDelete} title="Delete Review" message="Delete this review permanently?" />
       <SuccessModal open={!!msg} onClose={() => setMsg("")} message={msg} />

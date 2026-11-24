@@ -11,10 +11,12 @@ export const AdminCustomers: React.FC = () => {
   const [users, setUsers] = React.useState<any[]>([]);
   const [open, setOpen] = React.useState(false);
   const [edit, setEdit] = React.useState<any>(null);
+  const [confirmSave, setConfirmSave] = React.useState(false);
   const [form, setForm] = React.useState({ ...emptyForm });
   const [delId, setDelId] = React.useState<string | null>(null);
   const [msg, setMsg] = React.useState("");
   const [err, setErr] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
 
   const load = async () => {
     try { setUsers((await api.get("/users")).data); }
@@ -22,16 +24,29 @@ export const AdminCustomers: React.FC = () => {
   };
   React.useEffect(() => { load(); }, []);
 
-  const openCreate = () => { setEdit(null); setForm({ ...emptyForm }); setOpen(true); };
+  const openCreate = () => { setEdit(null); setForm({ ...emptyForm }); setFieldErrors({}); setOpen(true); };
   const openEdit = (u: any) => {
     setEdit(u);
     setForm({ fullName: u.fullName, email: u.email, phoneNumber: u.phoneNumber || "", password: "", role: u.role });
+    setFieldErrors({});
     setOpen(true);
   };
 
   const save = async () => {
+    const errs: Record<string, string> = {};
+    const name = form.fullName.trim();
+    const email = form.email.trim();
+    const phone = form.phoneNumber.trim();
+    if (!name) errs.fullName = "Full name is required.";
+    else if (!/^[A-Za-z\s.'-]+$/.test(name)) errs.fullName = "Name must contain letters only.";
+    if (!email) errs.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = "Please enter a valid email address (e.g. name@email.com).";
+    if (phone && !/^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/.test(phone)) errs.phoneNumber = "Phone must start with 09 or +63 9XX XXX XXXX.";
+    if (!edit && !form.password) errs.password = "Password is required for new customers.";
+    if (Object.keys(errs).length) { setFieldErrors(errs); setErr("Please fix the highlighted fields."); return; }
+    setFieldErrors({});
     try {
-      const payload: any = { ...form };
+      const payload: any = { ...form, fullName: name, email, phoneNumber: phone };
       if (!payload.password) delete payload.password;
       if (edit) await api.put(`/users/${edit.id}`, payload);
       else await api.post("/users", payload);
@@ -74,26 +89,41 @@ export const AdminCustomers: React.FC = () => {
         {!users.length && <Card className="p-6 text-center text-slate-500">No customers yet.</Card>}
       </div>
 
-      <Modal open={open} onClose={() => setOpen(false)} title={edit ? "Edit Customer" : "Add Customer"}>
-        <Input label="Full Name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
-        <Input label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-        <Input label="Phone Number" value={form.phoneNumber} onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })} />
+      <Modal open={open} onClose={() => { setOpen(false); setFieldErrors({}); }} title={edit ? "Edit Customer" : "Add Customer"}>
+        <div>
+          <Input label="Full Name" value={form.fullName} className={fieldErrors.fullName ? "border-red-500 ring-2 ring-red-500/30" : ""} onChange={(e) => { setForm({ ...form, fullName: e.target.value.replace(/[^A-Za-z\s.'-]/g, "") }); setFieldErrors((p) => ({ ...p, fullName: "" })); }} />
+          {fieldErrors.fullName && <p className="text-xs text-red-600 -mt-3 mb-3">{fieldErrors.fullName}</p>}
+        </div>
+        <div>
+          <Input label="Email" type="email" value={form.email} className={fieldErrors.email ? "border-red-500 ring-2 ring-red-500/30" : ""} onChange={(e) => { setForm({ ...form, email: e.target.value }); setFieldErrors((p) => ({ ...p, email: "" })); }} />
+          {fieldErrors.email && <p className="text-xs text-red-600 -mt-3 mb-3">{fieldErrors.email}</p>}
+        </div>
+        <div>
+          <Input label="Phone Number" inputMode="numeric" value={form.phoneNumber} className={fieldErrors.phoneNumber ? "border-red-500 ring-2 ring-red-500/30" : ""} onChange={(e) => { setForm({ ...form, phoneNumber: e.target.value.replace(/[^0-9+\s]/g, "") }); setFieldErrors((p) => ({ ...p, phoneNumber: "" })); }} placeholder="09XXXXXXXXX or +63 9XX XXX XXXX" />
+          {fieldErrors.phoneNumber && <p className="text-xs text-red-600 -mt-3 mb-3">{fieldErrors.phoneNumber}</p>}
+        </div>
         <Select label="Role" value={form.role} disabled={me?.role !== "ADMIN"} onChange={(e) => setForm({ ...form, role: e.target.value })}>
           <option value="CUSTOMER">CUSTOMER</option>
           <option value="STAFF">STAFF</option>
           <option value="ADMIN">ADMIN</option>
         </Select>
-        <Input
-          label={edit ? "New Password (leave blank to keep current)" : "Password (default: Password123!)"}
-          type="password"
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-        />
+        <div>
+          <Input
+            label={edit ? "New Password (leave blank to keep current)" : "Password (default: Password123!)"}
+            type="password"
+            value={form.password}
+            className={fieldErrors.password ? "border-red-500 ring-2 ring-red-500/30" : ""}
+            onChange={(e) => { setForm({ ...form, password: e.target.value }); setFieldErrors((p) => ({ ...p, password: "" })); }}
+          />
+          {fieldErrors.password && <p className="text-xs text-red-600 -mt-3 mb-3">{fieldErrors.password}</p>}
+        </div>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={save}>{edit ? "Save Changes" : "Create Customer"}</Button>
+          <Button onClick={() => setConfirmSave(true)}>{edit ? "Save Changes" : "Create Customer"}</Button>
         </div>
       </Modal>
+
+      <ConfirmDialog open={confirmSave} onClose={() => setConfirmSave(false)} onConfirm={() => { setConfirmSave(false); save(); }} title="Confirm Save" message={edit ? "Save changes to this customer?" : "Create this customer?"} />
 
       <ConfirmDialog open={!!delId} onClose={() => setDelId(null)} onConfirm={doDelete} title="Delete Customer" message="Delete this customer? Their reviews and cart will be removed; transaction history is kept." />
       <SuccessModal open={!!msg} onClose={() => setMsg("")} message={msg} />

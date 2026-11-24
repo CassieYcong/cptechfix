@@ -25,7 +25,11 @@ export const PaymentSuccess: React.FC = () => {
         }
         setMsg("Payment successful! Your receipt has been generated.");
       } catch (e: any) {
-        setErr(e.response?.data?.message || "Verification failed");
+        if (e?.response?.status === 401) {
+          setMsg("Payment recorded. Please log in to view full order details.");
+        } else {
+          setErr(e.response?.data?.message || "Verification failed");
+        }
       }
     })();
   }, [paymentId]);

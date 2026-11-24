@@ -2,20 +2,26 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/axios";
 import { useCart } from "../../components/context/CartContext";
+import { useAuth } from "../../components/context/AuthContext";
 import { Card, Button, Input } from "../../components/ui";
 import { ShoppingBag, MapPin, Truck, Store } from "lucide-react";
 import { PAYMENT_METHODS } from "../../components/ui/PaymentModal";
 import { CUSTOMER_INFO_ICONS } from "../../constants/customerInformationIcons";
+import { PH_CITIES_UNIQUE } from "../../constants/phCities";
 
 const VOUCHERS: Record<string, number> = { "TECHFIX10": 0.10, "SAVE50": 50 };
 
 export const Checkout: React.FC = () => {
   const nav = useNavigate();
   const { refresh } = useCart();
+  const { user } = useAuth();
   const [items, setItems] = React.useState<any[]>([]);
   const [products, setProducts] = React.useState<Record<string, any>>({});
   const [customerName, setCustomerName] = React.useState("");
   const [phone, setPhone] = React.useState("");
+  const [street, setStreet] = React.useState("");
+  const [city, setCity] = React.useState("");
+  const [province, setProvince] = React.useState("");
   const [address, setAddress] = React.useState("");
   const [method, setMethod] = React.useState("DELIVERY");
   const [payment, setPayment] = React.useState("GCash");
@@ -23,6 +29,7 @@ export const Checkout: React.FC = () => {
   const [appliedVoucher, setAppliedVoucher] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [err, setErr] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const DELIVERY_FEE = method === "DELIVERY" ? 99 : 0;
 
   React.useEffect(() => {
@@ -39,6 +46,14 @@ export const Checkout: React.FC = () => {
     })();
   }, []);
 
+  // Auto-fill customer details from the logged-in user.
+  React.useEffect(() => {
+    if (user) {
+      if (user.fullName && !customerName) setCustomerName(user.fullName);
+      if (user.phoneNumber && !phone) setPhone(user.phoneNumber);
+    }
+  }, [user]);
+
   const subtotal = items.reduce((a, i) => a + Number(products[i.productId]?.sellingPrice || 0) * i.quantity, 0);
   const discount = appliedVoucher ? (VOUCHERS[appliedVoucher] < 1 ? subtotal * VOUCHERS[appliedVoucher] : VOUCHERS[appliedVoucher]) : 0;
   const total = Math.max(0, subtotal - discount + DELIVERY_FEE);
@@ -52,8 +67,20 @@ export const Checkout: React.FC = () => {
   };
 
   const placeOrder = async () => {
-    if (!customerName.trim()) { setErr("Customer name is required"); return; }
-    if (method === "DELIVERY" && !address.trim()) { setErr("Delivery address required"); return; }
+    const errs: Record<string, string> = {};
+    const name = customerName.trim();
+    const ph = phone.trim();
+    if (!name) errs.customerName = "Customer name is required.";
+    else if (!/^[A-Za-z\s.'-]+$/.test(name)) errs.customerName = "Name must contain letters only.";
+    if (ph && !/^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/.test(ph)) errs.phone = "Phone must start with 09 or +63 9XX XXX XXXX.";
+    const fullAddress = method === "DELIVERY" ? [street.trim(), city.trim(), province.trim()].filter(Boolean).join(", ") : "";
+    if (method === "DELIVERY") {
+      if (!street.trim()) errs.street = "Street address is required.";
+      if (!city.trim()) errs.city = "City / Municipality is required.";
+      if (!province.trim()) errs.province = "Province is required.";
+    }
+    if (Object.keys(errs).length) { setFieldErrors(errs); setErr("Please fix the highlighted fields."); return; }
+    setFieldErrors({});
     setLoading(true); setErr("");
     try {
       const r = await api.post("/orders", {
@@ -66,7 +93,7 @@ export const Checkout: React.FC = () => {
         discount,
         voucherCode: appliedVoucher || undefined,
         deliveryMethod: method,
-        deliveryAddress: method === "DELIVERY" ? address : undefined,
+        deliveryAddress: method === "DELIVERY" ? fullAddress : undefined,
       });
       // clear cart
       await api.delete("/cart").catch(() => {});
@@ -99,8 +126,14 @@ export const Checkout: React.FC = () => {
             <Card className="p-5">
               <h3 className="font-bold text-navy mb-3 flex items-center gap-2">{CUSTOMER_INFO_ICONS["customer-contact"]} Customer Information</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Input label="Full Name" icon={CUSTOMER_INFO_ICONS["customer-name"]} value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Juan Dela Cruz" />
-                <Input label="Contact Number" icon={CUSTOMER_INFO_ICONS["customer-phone"]} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09XXXXXXXXX" />
+                <div>
+                  <Input label="Full Name" icon={CUSTOMER_INFO_ICONS["customer-name"]} value={customerName} className={fieldErrors.customerName ? "border-red-500 ring-2 ring-red-500/30" : ""} onChange={(e) => { setCustomerName(e.target.value.replace(/[^A-Za-z\s.'-]/g, "")); setFieldErrors((p) => ({ ...p, customerName: "" })); }} placeholder="Juan Dela Cruz" />
+                  {fieldErrors.customerName && <p className="text-xs text-red-600 -mt-3 mb-3">{fieldErrors.customerName}</p>}
+                </div>
+                <div>
+                  <Input label="Contact Number" icon={CUSTOMER_INFO_ICONS["customer-phone"]} inputMode="numeric" value={phone} className={fieldErrors.phone ? "border-red-500 ring-2 ring-red-500/30" : ""} onChange={(e) => { setPhone(e.target.value.replace(/[^0-9+\s]/g, "")); setFieldErrors((p) => ({ ...p, phone: "" })); }} placeholder="09XXXXXXXXX or +63 9XX XXX XXXX" />
+                  {fieldErrors.phone && <p className="text-xs text-red-600 -mt-3 mb-3">{fieldErrors.phone}</p>}
+                </div>
               </div>
             </Card>
             <Card className="p-5">
@@ -109,7 +142,29 @@ export const Checkout: React.FC = () => {
                 <button onClick={() => setMethod("DELIVERY")} className={`flex-1 p-3 rounded-xl border-2 flex items-center justify-center gap-2 ${method === "DELIVERY" ? "border-navy bg-navy/5" : "border-slate-200"}`}><Truck size={18} /> Delivery</button>
                 <button onClick={() => setMethod("PICKUP")} className={`flex-1 p-3 rounded-xl border-2 flex items-center justify-center gap-2 ${method === "PICKUP" ? "border-navy bg-navy/5" : "border-slate-200"}`}><Store size={18} /> Store Pickup</button>
               </div>
-              {method === "DELIVERY" && <Input label="Delivery Address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, City, Province" />}
+              {method === "DELIVERY" && (
+                <div className="space-y-3">
+                  <div>
+                    <Input label="Street Address" value={street} className={fieldErrors.street ? "border-red-500 ring-2 ring-red-500/30" : ""} onChange={(e) => { setStreet(e.target.value); setFieldErrors((p) => ({ ...p, street: "" })); }} placeholder="House/Unit, Street, Barangay" />
+                    {fieldErrors.street && <p className="text-xs text-red-600 -mt-3 mb-3">{fieldErrors.street}</p>}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">City / Municipality</label>
+                      <input list="ph-cities" value={city} onChange={(e) => { setCity(e.target.value); setFieldErrors((p) => ({ ...p, city: "" })); }} placeholder="Type to search city..." className={"w-full border rounded-lg px-3.5 py-2.5 text-sm " + (fieldErrors.city ? "border-red-500 ring-2 ring-red-500/30" : "border-slate-200")} />
+                      <datalist id="ph-cities">
+                        {PH_CITIES_UNIQUE.map((c) => <option key={c} value={c} />)}
+                      </datalist>
+                      {fieldErrors.city && <p className="text-xs text-red-600 mt-1">{fieldErrors.city}</p>}
+                    </div>
+                    <div>
+                      <Input label="Province" value={province} className={fieldErrors.province ? "border-red-500 ring-2 ring-red-500/30" : ""} onChange={(e) => { setProvince(e.target.value); setFieldErrors((p) => ({ ...p, province: "" })); }} placeholder="Province" />
+                      {fieldErrors.province && <p className="text-xs text-red-600 -mt-3 mb-3">{fieldErrors.province}</p>}
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500">Complete address (street, city, province) is required.</p>
+                </div>
+              )}
             </Card>
             <Card className="p-5">
               <h3 className="font-bold text-navy mb-3">Payment Method</h3>

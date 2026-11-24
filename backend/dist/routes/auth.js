@@ -1,6 +1,17 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
+const authLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // 10 attempts per IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many attempts. Please try again later." },
+});
 const zod_1 = require("zod");
 const db_1 = require("../db");
 const schema_1 = require("../schema");
@@ -10,9 +21,9 @@ const validate_1 = require("../middlewares/validate");
 const auth_2 = require("../middlewares/auth");
 const router = (0, express_1.Router)();
 const registerSchema = zod_1.z.object({
-    fullName: zod_1.z.string().min(2),
+    fullName: zod_1.z.string().min(2).regex(/^[A-Za-z\s.'-]+$/, { message: "Name must contain letters only" }),
     email: zod_1.z.string().email(),
-    phoneNumber: zod_1.z.string().optional(),
+    phoneNumber: zod_1.z.string().optional().refine((v) => !v || /^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/.test(v), { message: "Phone must start with 09 or +63 9XX XXX XXXX" }),
     password: zod_1.z.string().min(6),
     confirmPassword: zod_1.z.string().min(6),
 }).refine((d) => d.password === d.confirmPassword, { message: "Passwords must match", path: ["confirmPassword"] });
@@ -28,7 +39,7 @@ const publicUser = (u) => ({
     profileImage: u.profileImage,
     role: u.role,
 });
-router.post("/register", (0, validate_1.validate)(registerSchema), async (req, res) => {
+router.post("/register", authLimiter, (0, validate_1.validate)(registerSchema), async (req, res) => {
     try {
         const { fullName, email, phoneNumber, password } = req.body;
         const existing = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email));
@@ -45,7 +56,7 @@ router.post("/register", (0, validate_1.validate)(registerSchema), async (req, r
         res.status(500).json({ message: "Server error" });
     }
 });
-router.post("/login", (0, validate_1.validate)(loginSchema), async (req, res) => {
+router.post("/login", authLimiter, (0, validate_1.validate)(loginSchema), async (req, res) => {
     try {
         const { email, password } = req.body;
         const [user] = await db_1.db.select().from(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.email, email));
@@ -79,14 +90,25 @@ router.put("/me", auth_2.authenticate, async (req, res) => {
     }
     const update = { updatedAt: new Date() };
     if (fullName !== undefined) {
-        if (!String(fullName).trim())
+        const name = String(fullName).trim();
+        if (!name)
             return res.status(400).json({ message: "Full name is required" });
-        update.fullName = String(fullName).trim();
+        if (!/^[A-Za-z\s.'-]+$/.test(name))
+            return res.status(400).json({ message: "Full name must contain letters only" });
+        update.fullName = name;
     }
-    if (email !== undefined)
-        update.email = email;
-    if (phoneNumber !== undefined)
-        update.phoneNumber = phoneNumber;
+    if (email !== undefined) {
+        const em = String(email).trim();
+        if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em))
+            return res.status(400).json({ message: "Please enter a valid email address" });
+        update.email = em;
+    }
+    if (phoneNumber !== undefined) {
+        const ph = String(phoneNumber).trim();
+        if (ph && !/^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/.test(ph))
+            return res.status(400).json({ message: "Phone must start with 09 or +63 9XX XXX XXXX" });
+        update.phoneNumber = ph;
+    }
     if (profileImage !== undefined)
         update.profileImage = profileImage ? String(profileImage) : null;
     const [user] = await db_1.db.update(schema_1.users).set(update).where((0, drizzle_orm_1.eq)(schema_1.users.id, req.user.id)).returning();

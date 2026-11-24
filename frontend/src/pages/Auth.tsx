@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../components/context/AuthContext";
 import { Input, Button } from "../components/ui";
-import { SuccessModal, ErrorModal } from "../components/ui/Modal";
+import { SuccessModal, ErrorModal, ConfirmDialog } from "../components/ui/Modal";
 import { Mail, Lock, User, Phone, Eye, EyeOff } from "lucide-react";
 import logo from "../assets/logo.png";
 import api from "../lib/axios";
@@ -64,15 +64,26 @@ export const Login: React.FC = () => {
   const [success, setSuccess] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
 
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [errors, setErrors] = React.useState<{ email?: string; password?: string }>({});
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
     setErr("");
+    const newErrors: { email?: string; password?: string } = {};
     const trimmedEmail = email.trim();
-    if (!trimmedEmail) { setErr("Email is required."); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) { setErr("Please enter a valid email address."); return; }
-    if (!password) { setErr("Password is required."); return; }
+    if (!trimmedEmail) newErrors.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) newErrors.email = "Please enter a valid email address (e.g. name@email.com).";
+    if (!password) newErrors.password = "Password is required.";
+    if (Object.keys(newErrors).length) { setErrors(newErrors); return; }
+    setErrors({});
+    setConfirmOpen(true);
+  };
+
+  const doLogin = async () => {
+    setConfirmOpen(false);
     setLoading(true);
+    const trimmedEmail = email.trim();
     try {
       const u = await login(trimmedEmail, password);
       setSuccess(true);
@@ -104,12 +115,12 @@ export const Login: React.FC = () => {
         </div>
         <form onSubmit={submit} className="space-y-4">
           <IconField icon={<Mail size={18} />}>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Enter your email"
-              className={fieldClass} />
+            <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setErrors((p) => ({ ...p, email: undefined })); }} required placeholder="Enter your email"
+              className={fieldClass + (errors.email ? " border-red-500 ring-2 ring-red-500/30" : "")} />
           </IconField>
           <IconField icon={<Lock size={18} />}>
-            <input type={showPwd ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="Enter your password"
-              className={fieldClass + " pr-10"} />
+            <input type={showPwd ? "text" : "password"} value={password} onChange={(e) => { setPassword(e.target.value); setErrors((p) => ({ ...p, password: undefined })); }} required placeholder="Enter your password"
+              className={fieldClass + " pr-10" + (errors.password ? " border-red-500 ring-2 ring-red-500/30" : "")} />
             <button type="button" onClick={() => setShowPwd((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1d4ed8]">
               {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -118,6 +129,8 @@ export const Login: React.FC = () => {
             <label className="flex items-center gap-2 text-slate-600"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="rounded" /> Remember me</label>
             <Link to="/forgot-password" className="text-[#1d4ed8] font-medium hover:underline">Forgot password?</Link>
           </div>
+          {errors.email && <p className="text-xs text-red-600 -mt-2">{errors.email}</p>}
+          {errors.password && <p className="text-xs text-red-600 -mt-2">{errors.password}</p>}
           <button type="submit" disabled={loading} className="w-full py-3 rounded-lg bg-[#1d4ed8] text-white font-semibold hover:bg-[#1e40af] transition shadow-lg shadow-blue-600/30 disabled:opacity-50">
             {loading ? "Signing in..." : "Log in"}
           </button>
@@ -127,6 +140,7 @@ export const Login: React.FC = () => {
           <div><Link to="/admin/login" className="text-slate-500 hover:text-[#1d4ed8] transition">Admin Log in</Link></div>
         </div>
       </SplitLayout>
+      <ConfirmDialog open={confirmOpen} onClose={() => setConfirmOpen(false)} onConfirm={doLogin} title="Confirm Login" message={`Are you sure you want to log in as ${email}?`} />
       <SuccessModal open={success} onClose={() => setSuccess(false)} message="Login successful" />
       <ErrorModal open={!!err} onClose={() => setErr("")} message={err} />
     </>
@@ -143,16 +157,25 @@ export const Register: React.FC = () => {
   const [err, setErr] = React.useState("");
   const [success, setSuccess] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
     setErr("");
-    if (!form.fullName.trim()) { setErr("Full name is required."); return; }
-    if (!form.email.trim()) { setErr("Email is required."); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { setErr("Please enter a valid email address."); return; }
-    if (form.password.length < 6) { setErr("Password must be at least 6 characters."); return; }
-    if (form.password !== form.confirmPassword) { setErr("Passwords must match."); return; }
+    const next: Record<string, string> = {};
+    const name = form.fullName.trim();
+    const email = form.email.trim();
+    const phone = form.phoneNumber.trim();
+    if (!name) next.fullName = "Full name is required.";
+    else if (!/^[A-Za-z\s.'-]+$/.test(name)) next.fullName = "Name must contain letters only (no numbers or special characters).";
+    if (!email) next.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = "Please enter a valid email address (e.g. name@email.com).";
+    if (phone && !/^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/.test(phone)) next.phoneNumber = "Phone must start with 09 (e.g. 09171234567) or +63 9XX XXX XXXX.";
+    if (form.password.length < 6) next.password = "Password must be at least 6 characters.";
+    if (form.password !== form.confirmPassword) next.confirmPassword = "Passwords must match.";
+    if (Object.keys(next).length) { setErrors(next); return; }
+    setErrors({});
     setLoading(true);
     try {
       await register({ ...form, email: form.email.trim(), fullName: form.fullName.trim() });
@@ -184,27 +207,42 @@ export const Register: React.FC = () => {
           <p className="text-slate-500 text-sm mt-1">Join CP TechFix today.</p>
         </div>
         <form onSubmit={submit} className="space-y-4">
-          <IconField icon={<User size={18} />}>
-            <input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required placeholder="Enter your full name" className={fieldClass} />
-          </IconField>
-          <IconField icon={<Mail size={18} />}>
-            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required placeholder="Enter your email" className={fieldClass} />
-          </IconField>
-          <IconField icon={<Phone size={18} />}>
-            <input value={form.phoneNumber} onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })} placeholder="Enter your phone number" className={fieldClass} />
-          </IconField>
-          <IconField icon={<Lock size={18} />}>
-            <input type={showPwd ? "text" : "password"} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required placeholder="Enter your password" className={fieldClass + " pr-10"} />
-            <button type="button" onClick={() => setShowPwd((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1d4ed8]">
-              {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </IconField>
-          <IconField icon={<Lock size={18} />}>
-            <input type={showConfirm ? "text" : "password"} value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} required placeholder="Confirm your password" className={fieldClass + " pr-10"} />
-            <button type="button" onClick={() => setShowConfirm((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1d4ed8]">
-              {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </IconField>
+          <div>
+            <IconField icon={<User size={18} />}>
+              <input value={form.fullName} onChange={(e) => { setForm({ ...form, fullName: e.target.value.replace(/[^A-Za-z\s.'-]/g, "") }); setErrors((p) => ({ ...p, fullName: "" })); }} required placeholder="Enter your full name" className={fieldClass + (errors.fullName ? " border-red-500 ring-2 ring-red-500/30" : "")} />
+            </IconField>
+            {errors.fullName && <p className="text-xs text-red-600 mt-1">{errors.fullName}</p>}
+          </div>
+          <div>
+            <IconField icon={<Mail size={18} />}>
+              <input type="email" value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setErrors((p) => ({ ...p, email: "" })); }} required placeholder="Enter your email" className={fieldClass + (errors.email ? " border-red-500 ring-2 ring-red-500/30" : "")} />
+            </IconField>
+            {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
+          </div>
+          <div>
+            <IconField icon={<Phone size={18} />}>
+              <input inputMode="numeric" value={form.phoneNumber} onChange={(e) => { setForm({ ...form, phoneNumber: e.target.value.replace(/[^0-9+\s]/g, "") }); setErrors((p) => ({ ...p, phoneNumber: "" })); }} placeholder="09XXXXXXXXX or +63 9XX XXX XXXX" className={fieldClass + (errors.phoneNumber ? " border-red-500 ring-2 ring-red-500/30" : "")} />
+            </IconField>
+            {errors.phoneNumber && <p className="text-xs text-red-600 mt-1">{errors.phoneNumber}</p>}
+          </div>
+          <div>
+            <IconField icon={<Lock size={18} />}>
+              <input type={showPwd ? "text" : "password"} value={form.password} onChange={(e) => { setForm({ ...form, password: e.target.value }); setErrors((p) => ({ ...p, password: "" })); }} required placeholder="Enter your password" className={fieldClass + " pr-10" + (errors.password ? " border-red-500 ring-2 ring-red-500/30" : "")} />
+              <button type="button" onClick={() => setShowPwd((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1d4ed8]">
+                {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </IconField>
+            {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password}</p>}
+          </div>
+          <div>
+            <IconField icon={<Lock size={18} />}>
+              <input type={showConfirm ? "text" : "password"} value={form.confirmPassword} onChange={(e) => { setForm({ ...form, confirmPassword: e.target.value }); setErrors((p) => ({ ...p, confirmPassword: "" })); }} required placeholder="Confirm your password" className={fieldClass + " pr-10" + (errors.confirmPassword ? " border-red-500 ring-2 ring-red-500/30" : "")} />
+              <button type="button" onClick={() => setShowConfirm((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1d4ed8]">
+                {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </IconField>
+            {errors.confirmPassword && <p className="text-xs text-red-600 mt-1">{errors.confirmPassword}</p>}
+          </div>
           <button type="submit" disabled={loading} className="w-full py-3 rounded-lg bg-[#1d4ed8] text-white font-semibold hover:bg-[#1e40af] transition shadow-lg shadow-blue-600/30 disabled:opacity-50">
             {loading ? "Creating..." : "Create Account"}
           </button>
@@ -230,16 +268,27 @@ export const AdminLogin: React.FC = () => {
   const [err, setErr] = React.useState("");
   const [success, setSuccess] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [errors, setErrors] = React.useState<{ email?: string; password?: string }>({});
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
     setErr("");
+    const newErrors: { email?: string; password?: string } = {};
     const trimmedEmail = email.trim();
-    if (!trimmedEmail) { setErr("Email is required."); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) { setErr("Please enter a valid email address."); return; }
-    if (!password) { setErr("Password is required."); return; }
+    if (!trimmedEmail) newErrors.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) newErrors.email = "Please enter a valid email address (e.g. name@email.com).";
+    if (!password) newErrors.password = "Password is required.";
+    if (Object.keys(newErrors).length) { setErrors(newErrors); return; }
+    setErrors({});
+    setConfirmOpen(true);
+  };
+
+  const doLogin = async () => {
+    setConfirmOpen(false);
     setLoading(true);
+    const trimmedEmail = email.trim();
     try {
       const u = await login(trimmedEmail, password);
       if (u.role === "CUSTOMER") {
@@ -275,10 +324,10 @@ export const AdminLogin: React.FC = () => {
         </div>
         <form onSubmit={submit} className="space-y-4">
           <IconField icon={<Mail size={18} />}>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Enter your email" className={fieldClass} />
+            <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setErrors((p) => ({ ...p, email: undefined })); }} required placeholder="Enter your email" className={fieldClass + (errors.email ? " border-red-500 ring-2 ring-red-500/30" : "")} />
           </IconField>
           <IconField icon={<Lock size={18} />}>
-            <input type={showPwd ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="Enter your password" className={fieldClass + " pr-10"} />
+            <input type={showPwd ? "text" : "password"} value={password} onChange={(e) => { setPassword(e.target.value); setErrors((p) => ({ ...p, password: undefined })); }} required placeholder="Enter your password" className={fieldClass + " pr-10" + (errors.password ? " border-red-500 ring-2 ring-red-500/30" : "")} />
             <button type="button" onClick={() => setShowPwd((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#1d4ed8]">
               {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -287,6 +336,8 @@ export const AdminLogin: React.FC = () => {
             <label className="flex items-center gap-2 text-slate-600"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="rounded" /> Remember me</label>
             <Link to="/forgot-password" className="text-[#1d4ed8] font-medium hover:underline">Forgot password?</Link>
           </div>
+          {errors.email && <p className="text-xs text-red-600 -mt-2">{errors.email}</p>}
+          {errors.password && <p className="text-xs text-red-600 -mt-2">{errors.password}</p>}
           <button type="submit" disabled={loading} className="w-full py-3 rounded-lg bg-[#1d4ed8] text-white font-semibold hover:bg-[#1e40af] transition shadow-lg shadow-blue-600/30 disabled:opacity-50">
             {loading ? "Signing in..." : "Log in"}
           </button>
@@ -295,6 +346,7 @@ export const AdminLogin: React.FC = () => {
           <Link to="/login" className="text-slate-500 hover:text-[#1d4ed8] transition">Customer login instead</Link>
         </div>
       </SplitLayout>
+      <ConfirmDialog open={confirmOpen} onClose={() => setConfirmOpen(false)} onConfirm={doLogin} title="Confirm Login" message={`Are you sure you want to log in as ${email}?`} />
       <SuccessModal open={success} onClose={() => setSuccess(false)} message="Login successful" />
       <ErrorModal open={!!err} onClose={() => setErr("")} message={err} />
     </>

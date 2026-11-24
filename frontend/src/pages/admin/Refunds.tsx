@@ -12,6 +12,7 @@ export const AdminRefunds: React.FC = () => {
   const [editForm, setEditForm] = React.useState({ refundAmount: 0, refundMethod: "Cash", refundReason: "" });
   const [delRefund, setDelRefund] = React.useState<string | null>(null);
   const [delCancel, setDelCancel] = React.useState<string | null>(null);
+  const [pendingStatus, setPendingStatus] = React.useState<{ id: string; status: string; label: string } | null>(null);
   const [msg, setMsg] = React.useState("");
   const [err, setErr] = React.useState("");
 
@@ -80,7 +81,7 @@ export const AdminRefunds: React.FC = () => {
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                   <Badge>{r.refundStatus}</Badge>
-                  <select className="border rounded p-1 text-sm" value={r.refundStatus} onChange={(e) => updateStatus(r.id, e.target.value)}>
+                  <select className="border rounded p-1 text-sm" value={r.refundStatus} onChange={(e) => { const next = e.target.value; if (next !== r.refundStatus) setPendingStatus({ id: r.id, status: next, label: r.refundReference || r.id }); }}>
                     {["REQUESTED","UNDER_REVIEW","APPROVED","PROCESSING","REFUNDED","REJECTED"].map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                   <Button variant="secondary" onClick={() => openEdit(r)}>Edit</Button>
@@ -140,6 +141,7 @@ export const AdminRefunds: React.FC = () => {
         </div>
       </Modal>
 
+      <ConfirmDialog open={!!pendingStatus} onClose={() => setPendingStatus(null)} onConfirm={() => { if (pendingStatus) { updateStatus(pendingStatus.id, pendingStatus.status); setPendingStatus(null); } }} title="Confirm Status Change" message={pendingStatus ? `Are you sure you want to change refund ${pendingStatus.label} status to "${pendingStatus.status.replace(/_/g, " ")}"?` : ""} />
       <ConfirmDialog open={!!delRefund} onClose={() => setDelRefund(null)} onConfirm={doDeleteRefund} title="Delete Refund" message="Delete this refund record?" />
       <ConfirmDialog open={!!delCancel} onClose={() => setDelCancel(null)} onConfirm={doDeleteCancel} title="Delete Cancellation" message="Delete this cancellation request?" />
       <SuccessModal open={!!msg} onClose={() => setMsg("")} message={msg} />

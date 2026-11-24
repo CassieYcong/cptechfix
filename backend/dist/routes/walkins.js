@@ -10,9 +10,10 @@ const validate_1 = require("../middlewares/validate");
 const auth_2 = require("../utils/auth");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate, (0, auth_1.requireRole)("ADMIN", "STAFF"));
+const phoneRegex = /^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/;
 const customerSchema = zod_1.z.object({
-    fullName: zod_1.z.string().min(2),
-    phoneNumber: zod_1.z.string().optional(),
+    fullName: zod_1.z.string().min(2).regex(/^[A-Za-z\s.'-]+$/, { message: "Name must contain letters only" }),
+    phoneNumber: zod_1.z.string().optional().refine((v) => !v || phoneRegex.test(v), { message: "Phone must start with 09 or +63 9XX XXX XXXX" }),
     email: zod_1.z.string().email().optional().or(zod_1.z.literal("")),
 });
 router.post("/customers", (0, validate_1.validate)(customerSchema), async (req, res) => {

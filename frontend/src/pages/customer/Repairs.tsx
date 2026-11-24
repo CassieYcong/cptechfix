@@ -1,12 +1,30 @@
 import React from "react";
 import api from "../../lib/axios";
+import { mediaUrl } from "../../lib/media";
 import { Card, Button, Input, Textarea, Select, Badge } from "../../components/ui";
 import { Modal, ConfirmDialog, SuccessModal, ErrorModal, LoginRequiredModal } from "../../components/ui/Modal";
 import { useAuth } from "../../components/context/AuthContext";
-import { Wrench, Plus, Eye, XCircle, Calendar, Smartphone, Pencil, Trash2, X } from "lucide-react";
+import { Wrench, Plus, Eye, XCircle, Calendar, Smartphone, Laptop, Monitor, Tablet, Printer, Cog, Pencil, Trash2, X, Upload, Image as ImageIcon } from "lucide-react";
 
 const statusColor: Record<string,string> = { PENDING: "yellow", APPROVED: "blue", IN_PROGRESS: "blue", COMPLETED: "green", CANCELLED: "red" };
-const EMPTY_FORM = { deviceType: "", brand: "", model: "", problemDescription: "", preferredDate: "", imageUrl: "" };
+const SERVICE_TYPES = ["Screen Replacement", "Battery Replacement", "Charging Port Repair", "Keyboard Replacement", "Motherboard Repair", "Data Recovery", "Virus Removal", "Hardware Upgrade", "Cleaning & Maintenance", "Diagnostics", "Other"];
+const validatePhone = (phone: string) => {
+  const p = (phone || "").trim();
+  if (!p) return true; // optional
+  // 09XXXXXXXXX or +63 9XX XXX XXXX
+  return /^(09\d{9}|\+63\s?9\d{2}\s?\d{3}\s?\d{4})$/.test(p);
+};
+const deviceIcon = (deviceType: string) => {
+  const d = (deviceType || "").toLowerCase();
+  if (d.includes("laptop")) return <Laptop size={22} />;
+  if (d.includes("desktop") || d.includes("computer") || d.includes("pc")) return <Monitor size={22} />;
+  if (d.includes("phone") || d.includes("mobile")) return <Smartphone size={22} />;
+  if (d.includes("tablet") || d.includes("ipad")) return <Tablet size={22} />;
+  if (d.includes("printer")) return <Printer size={22} />;
+  if (d.includes("monitor")) return <Monitor size={22} />;
+  return <Cog size={22} />;
+};
+const EMPTY_FORM = { deviceType: "", brand: "", model: "", serviceType: "", problemDescription: "", preferredDate: "", imageUrl: "" };
 
 export const CustomerRepairs: React.FC = () => {
   const { user, token } = useAuth();
@@ -36,6 +54,7 @@ export const CustomerRepairs: React.FC = () => {
       setErr("Device type and problem description are required.");
       return;
     }
+
     try {
       if (editId) {
         await api.put(`/repairs/${editId}`, form);
@@ -60,6 +79,7 @@ export const CustomerRepairs: React.FC = () => {
       deviceType: r.deviceType || "",
       brand: r.brand || "",
       model: r.model || "",
+      serviceType: r.serviceType || "",
       problemDescription: r.problemDescription || "",
       preferredDate: r.preferredDate ? new Date(r.preferredDate).toISOString().slice(0, 10) : "",
       imageUrl: r.imageUrl || "",
@@ -123,12 +143,19 @@ export const CustomerRepairs: React.FC = () => {
             <Input label="Device Type" value={form.deviceType} onChange={(e) => setForm({ ...form, deviceType: e.target.value })} required placeholder="Laptop, Desktop, Phone..." />
             <Input label="Brand" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} placeholder="Dell, HP, Apple..." />
             <Input label="Model" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Service Type</label>
+              <select value={form.serviceType} onChange={(e) => setForm({ ...form, serviceType: e.target.value })} className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm">
+                <option value="">Select service type</option>
+                {SERVICE_TYPES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
             <Input label="Preferred Date" type="date" value={form.preferredDate} onChange={(e) => setForm({ ...form, preferredDate: e.target.value })} />
           </div>
           <Textarea label="Problem Description" value={form.problemDescription} onChange={(e) => setForm({ ...form, problemDescription: e.target.value })} required placeholder="Describe the issue..." />
           <div className="mb-4">
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Device Image (optional)</label>
-            <input type="file" accept="image/*" onChange={async (e) => {
+            <input id="repair-image-upload" type="file" accept="image/*" className="hidden" onChange={async (e) => {
               const f = e.target.files?.[0];
               if (!f) return;
               const fd = new FormData();
@@ -137,8 +164,15 @@ export const CustomerRepairs: React.FC = () => {
                 const r = await api.post("/uploads", fd, { headers: { "Content-Type": "multipart/form-data" } });
                 setForm((prev) => ({ ...prev, imageUrl: r.data.url }));
               } catch {}
-            }} className="block w-full max-w-full min-w-0 text-sm" />
-            {form.imageUrl && <img src={form.imageUrl.startsWith("http") ? form.imageUrl : "http://localhost:5000" + form.imageUrl} alt="preview" className="mt-2 h-24 rounded-lg object-cover" />}
+            }} />
+            <label htmlFor="repair-image-upload" className="flex w-full max-w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600 hover:border-navy hover:bg-slate-100 transition">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white border border-slate-200 text-navy"><Upload size={16} /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium text-slate-700">{form.imageUrl ? "Image selected — click to change" : "Click to choose an image"}</span>
+                <span className="block text-xs text-slate-500 truncate">JPG, PNG or GIF</span>
+              </span>
+            </label>
+            {form.imageUrl && <img src={mediaUrl(form.imageUrl)} alt="preview" className="mt-2 h-24 rounded-lg object-cover" />}
           </div>
           <div className="flex justify-end gap-2">
             {editId ? (
@@ -168,11 +202,11 @@ export const CustomerRepairs: React.FC = () => {
             <Card key={r.id} className="p-5 hover:shadow-md transition">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="flex items-start gap-4 min-w-0">
-                  <div className="w-12 h-12 rounded-xl bg-navy/10 text-navy flex items-center justify-center shrink-0"><Smartphone size={22} /></div>
+                  <div className="w-12 h-12 rounded-xl bg-navy/10 text-navy flex items-center justify-center shrink-0">{deviceIcon(r.deviceType)}</div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-navy">{r.referenceNumber}</span>
-                      <Badge color={statusColor[r.status] || "gray"}>{r.status}</Badge>
+                      <Badge color={statusColor[r.status] || "gray"}>{r.status.replace(/_/g, " ")}</Badge>
                     </div>
                     <div className="text-sm text-slate-600 mt-1">{r.deviceType} {r.brand} {r.model}</div>
                     <div className="text-sm text-slate-500 mt-1 break-words">{r.problemDescription}</div>
@@ -200,7 +234,7 @@ export const CustomerRepairs: React.FC = () => {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="bg-slate-50 rounded-lg p-3"><div className="text-slate-500 text-xs">Reference</div><div className="font-semibold text-navy">{detail.referenceNumber}</div></div>
-              <div className="bg-slate-50 rounded-lg p-3"><div className="text-slate-500 text-xs">Status</div><div className="font-semibold"><Badge color={statusColor[detail.status]}>{detail.status}</Badge></div></div>
+              <div className="bg-slate-50 rounded-lg p-3"><div className="text-slate-500 text-xs">Status</div><div className="font-semibold"><Badge color={statusColor[detail.status]}>{detail.status.replace(/_/g, " ")}</Badge></div></div>
               <div className="bg-slate-50 rounded-lg p-3"><div className="text-slate-500 text-xs">Device</div><div className="font-semibold text-navy">{detail.deviceType} {detail.brand} {detail.model}</div></div>
               <div className="bg-slate-50 rounded-lg p-3"><div className="text-slate-500 text-xs">Preferred Date</div><div className="font-semibold text-navy">{detail.preferredDate ? new Date(detail.preferredDate).toLocaleDateString() : "—"}</div></div>
               <div className="bg-slate-50 rounded-lg p-3"><div className="text-slate-500 text-xs">Cost</div><div className="font-semibold text-navy">₱{Number(detail.repairCost).toFixed(2)}</div></div>
@@ -212,7 +246,7 @@ export const CustomerRepairs: React.FC = () => {
       </Modal>
 
       <ConfirmDialog open={!!cancelId} onClose={() => setCancelId(null)} onConfirm={cancel} title="Cancel Repair" message="Cancel this repair request? This cannot be undone." />
-      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title="Delete Repair" message="Delete this repair request permanently? This cannot be undone." />
+      <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title="Delete Repair Request" message="Are you sure you want to delete this repair request? It will be permanently deleted and cannot be undone." />
       <SuccessModal open={!!msg} onClose={() => setMsg("")} message={msg} />
       <ErrorModal open={!!err} onClose={() => setErr("")} message={err} />
       <LoginRequiredModal open={loginModal} onClose={() => setLoginModal(false)} message="Please log in to your account or create an account to submit your repair request." />

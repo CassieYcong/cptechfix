@@ -71,9 +71,9 @@ export const Modal: React.FC<{ open: boolean; onClose: () => void; title?: strin
   );
 };
 
-export const ConfirmDialog: React.FC<{ open: boolean; onClose: () => void; onConfirm: () => void; title?: string; message?: string; loading?: boolean }> = ({ open, onClose, onConfirm, title = "Confirm", message = "Are you sure?", loading }) => (
+export const ConfirmDialog: React.FC<{ open: boolean; onClose: () => void; onConfirm: () => void; title?: string; message?: React.ReactNode; loading?: boolean }> = ({ open, onClose, onConfirm, title = "Confirm", message = "Are you sure?", loading }) => (
   <Modal open={open} onClose={onClose} title={title} size="max-w-md">
-    <p className="text-slate-700 mb-5">{message}</p>
+    <div className="text-slate-700 mb-5 whitespace-pre-wrap">{message}</div>
     <div className="flex justify-end gap-2">
       <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 font-medium">Cancel</button>
       <button onClick={onConfirm} disabled={loading} className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium disabled:opacity-50 hover:bg-red-700">{loading ? "..." : "Confirm"}</button>

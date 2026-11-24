@@ -68,7 +68,7 @@ export const AdminLayout: React.FC = () => {
   );
   return (
     <div className="min-h-screen flex bg-slate-50">
-      <div className="hidden md:block">{Sidebar}</div>
+      <div className="hidden md:block md:sticky md:top-0 md:h-dvh md:shrink-0">{Sidebar}</div>
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />

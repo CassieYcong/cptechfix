@@ -8,6 +8,7 @@ export const AdminOrders: React.FC = () => {
   const [orders, setOrders] = React.useState<any[]>([]);
   const [detail, setDetail] = React.useState<any>(null);
   const [edit, setEdit] = React.useState<any>(null);
+  const [confirmSave, setConfirmSave] = React.useState(false);
   const [form, setForm] = React.useState({ customerName: "", deliveryMethod: "DELIVERY", deliveryAddress: "" });
   const [delId, setDelId] = React.useState<string | null>(null);
   const [msg, setMsg] = React.useState("");
@@ -91,9 +92,11 @@ export const AdminOrders: React.FC = () => {
         <Input label="Delivery Address" value={form.deliveryAddress} onChange={(e) => setForm({ ...form, deliveryAddress: e.target.value })} />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setEdit(null)}>Cancel</Button>
-          <Button onClick={save}>Save Changes</Button>
+          <Button onClick={() => setConfirmSave(true)}>Save Changes</Button>
         </div>
       </Modal>
+
+      <ConfirmDialog open={confirmSave} onClose={() => setConfirmSave(false)} onConfirm={() => { setConfirmSave(false); save(); }} title="Confirm Update" message="Save changes to this order?" />
 
       <ConfirmDialog open={!!delId} onClose={() => setDelId(null)} onConfirm={doDelete} title="Delete Order" message="Delete this order? Stock will be restored and linked invoices/payments removed." />
       <SuccessModal open={!!msg} onClose={() => setMsg("")} message={msg} />

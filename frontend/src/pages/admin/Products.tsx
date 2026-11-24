@@ -12,6 +12,7 @@ export const AdminProducts: React.FC = () => {
   const [edit, setEdit] = React.useState<any>(null);
   const [adjust, setAdjust] = React.useState<any>(null);
   const [delId, setDelId] = React.useState<string | null>(null);
+  const [confirmSave, setConfirmSave] = React.useState(false);
   const [form, setForm] = React.useState({ sku: "", productName: "", description: "", category: "", brand: "Generic", supplier: "", costPrice: "", sellingPrice: "", stock: "", minimumStock: "", imageUrl: "", isActive: true });
   const [saving, setSaving] = React.useState(false);
   const [adj, setAdj] = React.useState({ quantity: "", movementType: "STOCK_IN", remarks: "" });
@@ -267,10 +268,11 @@ export const AdminProducts: React.FC = () => {
         {err && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{err}</div>}
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button disabled={saving} onClick={save}>{saving ? "Saving..." : "Save Product"}</Button>
+          <Button disabled={saving} onClick={() => setConfirmSave(true)}>{saving ? "Saving..." : "Save Product"}</Button>
         </div>
       </Modal>
 
+      <ConfirmDialog open={confirmSave} onClose={() => setConfirmSave(false)} onConfirm={() => { setConfirmSave(false); save(); }} title="Confirm Save" message={edit ? "Save changes to this product?" : "Create this new product?"} />
       {/* View details modal */}
       <Modal open={!!view} onClose={() => setView(null)} title="Product Details" size="max-w-2xl">
         {view && (
